@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Solar Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d0f14'/><rect x='4' y='10' width='24' height='16' rx='2' fill='%231e2230' stroke='%234ade80' stroke-width='0.75'/><line x1='4' y1='18' x2='28' y2='18' stroke='%234ade80' stroke-width='0.75'/><line x1='12' y1='10' x2='12' y2='26' stroke='%234ade80' stroke-width='0.75'/><line x1='20' y1='10' x2='20' y2='26' stroke='%234ade80' stroke-width='0.75'/><circle cx='16' cy='6' r='2' fill='%23f59e0b'/><line x1='16' y1='2' x2='16' y2='3.2' stroke='%23f59e0b' stroke-width='1' stroke-linecap='round'/><line x1='19.8' y1='3' x2='19.1' y2='3.9' stroke='%23f59e0b' stroke-width='1' stroke-linecap='round'/><line x1='12.2' y1='3' x2='12.9' y2='3.9' stroke='%23f59e0b' stroke-width='1' stroke-linecap='round'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d0f14'/><rect x='4' y='10' width='24' height='16' rx='2' fill='%231e2230' stroke='%234ade80' stroke-width='0.75'/><line x1='4' y1='18' x2='28' y2='18' stroke='%234ade80' stroke-width='0.75'/><line x1='12' y1='10' x2='12' y2='26' stroke='%234ade80' stroke-width='0.75'/><line x1='20' y1='10' x2='20' y2='26' stroke='%234ade80' stroke-width='0.75'/><circle cx='16' cy='6' r='2' fill='%23f59e0b'/><line x1='16' y1='2' x2='16' y2='3.2' stroke='%23f59e0b' stroke-width='1' stroke-linecap='round'/><line x1='19.8' y1='3' x2='19.1' y2='3.9' stroke='%23f59e0b' stroke-width='1' stroke-linecap='round'/><line x1='12.2' y1='3' x2='12.9' y2='3.9' stroke='%23f59e0b' stroke-width='1' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161921;
+    --surface2: #1e2230;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0f2f7;
+    --muted: #7a8099;
+    --accent: #4ade80;
+    --accent2: #60a5fa;
+    --accent3: #f59e0b;
+    --danger: #f87171;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Sora', sans-serif;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; }
+  body { min-height: 100vh; padding-bottom: 80px; }
+
+  /* HEADER */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,15,20,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .header-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* NAV TABS */
+  .nav {
+    display: flex; gap: 4px; padding: 10px 16px 0;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky; top: 63px; z-index: 99;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    flex-shrink: 0;
+    padding: 8px 16px 10px;
+    font-size: 12px; font-weight: 500; font-family: var(--sans);
+    color: var(--muted); background: none; border: none;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    cursor: pointer; white-space: nowrap; transition: color .15s;
+  }
+  .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* SECTIONS */
+  .section { display: none; padding: 16px; }
+  .section.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+  }
+
+  /* DATE RANGE PRESETS */
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .preset-btn {
+    padding: 6px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; font-family: var(--sans);
+    border: 1px solid var(--border2); background: none;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .preset-btn.active { background: var(--accent); color: #0d0f14; border-color: var(--accent); }
+
+  /* FORM ELEMENTS */
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 5px; font-family: var(--mono); }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono);
+    font-size: 13px; padding: 10px 12px; outline: none;
+    transition: border-color .15s; -webkit-appearance: none;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* SOURCE TOGGLE */
+  .source-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+  .source-btn {
+    padding: 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border2); background: none;
+    color: var(--muted); font-size: 12px; font-family: var(--sans);
+    cursor: pointer; text-align: center; transition: all .15s;
+  }
+  .source-btn.active { background: rgba(74,222,128,0.1); border-color: var(--accent); color: var(--accent); }
+
+  /* AREA TOGGLE */
+  .area-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .area-btn {
+    flex: 1; padding: 9px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border2); background: none;
+    color: var(--muted); font-size: 12px; font-family: var(--sans);
+    cursor: pointer; text-align: center; transition: all .15s;
+  }
+  .area-btn.active { background: rgba(96,165,250,0.1); border-color: var(--accent2); color: var(--accent2); }
+
+  /* COST ROW */
+  .cost-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .cost-total { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .cost-total span { color: var(--accent3); font-weight: 500; }
+
+  /* BTN */
+  .btn-primary {
+    width: 100%; padding: 14px;
+    background: var(--accent); color: #0d0f14;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; font-family: var(--sans);
+    cursor: pointer; transition: opacity .15s; margin-top: 4px;
+  }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-sm {
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border2); background: none;
+    color: var(--muted); font-size: 12px; font-family: var(--sans);
+    cursor: pointer; transition: all .15s;
+  }
+  .btn-sm:hover { border-color: var(--border2); color: var(--text); }
+
+  /* STATUS */
+  .status {
+    padding: 10px 14px; border-radius: var(--radius-sm);
+    font-size: 12px; font-family: var(--mono);
+    margin-top: 10px; display: none;
+  }
+  .status.loading { background: rgba(96,165,250,0.12); color: var(--accent2); display: block; }
+  .status.error   { background: rgba(248,113,113,0.12); color: var(--danger); display: block; }
+  .status.success { background: rgba(74,222,128,0.12); color: var(--accent); display: block; }
+
+  /* NOTE BOX */
+  .note { background: rgba(255,255,255,0.04); border-left: 2px solid var(--border2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 12px; font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+
+  /* METRICS GRID */
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .metric {
+    background: var(--surface2); border-radius: var(--radius-sm);
+    padding: 12px; border: 1px solid var(--border);
+  }
+  .metric-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .metric-sub { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: var(--mono); }
+  .metric-value.green { color: var(--accent); }
+  .metric-value.blue  { color: var(--accent2); }
+  .metric-value.amber { color: var(--accent3); }
+
+  /* INSIGHTS PANEL */
+  .insights { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; }
+  .insight-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .insight-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .insight-title { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .insight-body { font-size: 11px; color: var(--muted); line-height: 1.5; font-family: var(--mono); }
+  .insight-value { font-size: 14px; font-weight: 600; font-family: var(--mono); margin-top: 3px; }
+
+  /* CHART */
+  .chart-wrap { position: relative; width: 100%; height: 180px; margin-bottom: 4px; }
+  .chart-legend { display: flex; gap: 14px; font-size: 10px; color: var(--muted); margin-bottom: 12px; font-family: var(--mono); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; max-height: 340px; overflow-y: auto; border-radius: var(--radius-sm); }
+  .table-wrap::-webkit-scrollbar { width: 3px; height: 3px; }
+  .table-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; font-family: var(--mono); min-width: 520px; }
+  th {
+    position: sticky; top: 0; background: var(--surface);
+    padding: 8px 10px; text-align: left; color: var(--muted);
+    font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border2); font-family: var(--sans); font-weight: 500;
+    z-index: 1;
+  }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .col-rev { color: var(--accent2); }
+  .col-gp  { color: var(--accent); font-weight: 500; }
+  .col-neg { color: var(--muted); }
+  th.col-rev { color: var(--accent2); }
+  th.col-gp  { color: var(--accent); }
+
+  /* TAGS */
+  .tag { display: inline-block; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; font-family: var(--sans); }
+  .tag-high { background: rgba(74,222,128,0.15); color: var(--accent); }
+  .tag-mid  { background: rgba(96,165,250,0.15); color: var(--accent2); }
+  .tag-low  { background: rgba(248,113,113,0.12); color: var(--danger); }
+
+  /* RESOLUTION TOGGLE */
+  .res-row { display: flex; gap: 5px; margin-bottom: 12px; }
+  .res-btn {
+    padding: 5px 11px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    font-family: var(--sans); border: 1px solid var(--border2); background: none;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+  }
+  .res-btn.active { background: var(--accent2); color: #0d0f14; border-color: var(--accent2); }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+  .section-title { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .section-sub { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* BOTTOM SHEET ACTIONS */
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  .actions .btn-sm { flex: 1; text-align: center; }
+
+  /* DATE BAR — always visible below nav */
+  .date-bar {
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 8px 16px; display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; position: sticky; top: 107px; z-index: 98;
+  }
+  .date-bar .preset-btn { padding: 5px 10px; font-size: 11px; }
+  .date-bar .preset-btn.active { background: var(--accent); color: #0d0f14; border-color: var(--accent); }
+  .date-bar-custom { display: flex; gap: 6px; align-items: center; }
+  .date-bar-custom input[type=date] {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono);
+    font-size: 11px; padding: 5px 8px; outline: none; width: 130px;
+    -webkit-appearance: none;
+  }
+  .refetch-btn {
+    padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    font-family: var(--sans); border: none; background: var(--accent);
+    color: #0d0f14; cursor: pointer; white-space: nowrap; margin-left: auto;
+    transition: opacity .15s;
+  }
+  .refetch-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  @media (min-width: 600px) {
+    .metrics-grid { grid-template-columns: repeat(4, 1fr); }
+    .section { max-width: 700px; margin: 0 auto; padding: 20px; }
+    .nav { justify-content: center; }
+    .header { padding: 16px 24px 14px; }
+    .date-bar { max-width: 700px; margin: 0 auto; position: sticky; top: 113px; }
+    body { padding-bottom: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title"><span class="header-dot"></span>Solar Dashboard</div>
+    <div class="header-sub" id="headerSub">Configure in Setup to begin</div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <div id="growattBadge" style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--muted)">Growatt —</div>
+    <div id="eloBadge" style="font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:10px;background:rgba(255,255,255,0.06);color:var(--muted)">Eloverblik —</div>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="switchTab('setup')">Setup</button>
+  <button class="nav-btn" onclick="switchTab('insights')">Insights</button>
+  <button class="nav-btn" onclick="switchTab('report')">Report</button>
+  <button class="nav-btn" onclick="switchTab('prices')">Prices</button>
+  <button class="nav-btn" onclick="switchTab('production')">Production</button>
+  <button class="nav-btn" onclick="switchTab('consumption')">Consumption</button>
+</nav>
+
+<!-- ── PERSISTENT DATE BAR ── -->
+<div class="date-bar" id="dateBar">
+  <button class="preset-btn active" onclick="setPreset('7d')">7d</button>
+  <button class="preset-btn" onclick="setPreset('30d')">30d</button>
+  <button class="preset-btn" onclick="setPreset('mtd')">MTD</button>
+  <button class="preset-btn" onclick="setPreset('today')">Today</button>
+  <button class="preset-btn" onclick="setPreset('yesterday')">Yesterday</button>
+  <button class="preset-btn" onclick="setPreset('custom')">Custom ▾</button>
+  <div class="date-bar-custom" id="customDates" style="display:none">
+    <input type="date" id="dateFrom">
+    <span style="color:var(--muted);font-size:11px">→</span>
+    <input type="date" id="dateTo">
+  </div>
+  <button class="refetch-btn" id="refetchBtn" onclick="runFetch()">↻ Fetch</button>
+</div>
+
+<!-- ── SETUP ── -->
+<div class="section active" id="sec-setup">
+
+  <div class="card">
+    <div class="card-title">Nordpool area</div>
+    <div class="area-row">
+      <button class="area-btn active" id="aDK1" onclick="setArea('DK1')">DK1 – West Denmark</button>
+      <button class="area-btn" id="aDK2" onclick="setArea('DK2')">DK2 – East Denmark</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">Note: Havdrup is in DK2 (Zealand / East Denmark) — switch if you are in that area.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Export deductions</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">Costs deducted from the Nordpool spot price by your supplier and grid operator before you receive payment for exported energy.</div>
+    <div class="cost-row">
+      <div class="field"><label>Supplier handling fee (øre/kWh)</label><input type="number" id="costNrgi" value="4" step="0.1" min="0" oninput="updateCostTotal()"></div>
+      <div class="field"><label>Energinet feed-in tariff (øre/kWh)</label><input type="number" id="costEnergi" value="0.5" step="0.1" min="0" oninput="updateCostTotal()"></div>
+    </div>
+    <div class="cost-total">Total export deduction: <span id="costTotal">4.5 øre/kWh</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Consumer tariff (self-use savings)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6">Fixed costs added on top of the spot price when buying electricity from the grid. Every kWh your solar covers saves you this amount. Pre-filled with typical Danish rates (incl. VAT).</div>
+    <div class="field"><label>Fixed tariff on top of spot (DKK/kWh)</label><input type="number" id="consumerTariff" value="0.55084" step="0.001" min="0"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">
+      Includes: net tariff, system tariff, transmission tariff, electricity duty (elafgift), supplier fee, and VAT. Check your electricity bill for your exact figure.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Growatt data source</div>
+
+    <div class="note" style="margin-bottom:14px">
+      <strong style="color:var(--text)">Which login should I use?</strong><br>
+      — <strong style="color:var(--accent)">API token</strong> works for newer inverters: MIN, MOD, MID, SPH, SPA series. Generate it in ShinePhone → Me → username → API Token. <em>Unlimited lookback.</em><br>
+      — <strong style="color:var(--accent2)">Username + password</strong> works for older inverters: MIC, MAX, MAC series (including MIC 3000TL-X). <em>Reliable up to ~30 days — data beyond that may be inaccurate.</em><br>
+      — Not sure? Try token first. If it returns no data, switch to username + password.
+    </div>
+
+    <div class="source-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">
+      <button class="source-btn" id="mToken" onclick="setMode('token')">🔑 API token</button>
+      <button class="source-btn active" id="mPass" onclick="setMode('pass')">👤 Username + PW</button>
+      <button class="source-btn" id="mCSV" onclick="setMode('csv')">📋 Paste CSV</button>
+      <button class="source-btn" id="mSample" onclick="setMode('sample')">🔬 Sample data</button>
+    </div>
+
+    <div id="tokenForm" style="display:none">
+      <div class="note">Token stays in your browser only — never sent to Claude or stored anywhere.</div>
+      <div class="field"><label>Growatt API token</label><input type="password" id="gwToken" placeholder="Paste token here" autocomplete="off" style="font-family:var(--mono);letter-spacing:0.03em"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6">ShinePhone → Me → tap your username → API Token → Generate (or Retrieve)</div>
+    </div>
+
+    <div id="passForm">
+      <div class="note">Credentials stay in your browser only — never sent to Claude. Uses the classic server.growatt.com API (required for MIC series).</div>
+      <div class="field-row">
+        <div class="field"><label>Growatt username or email</label><input type="text" id="gwUser" placeholder="username or email" autocomplete="username"></div>
+        <div class="field"><label>Password</label><input type="password" id="gwPass" placeholder="••••••••" autocomplete="current-password"></div>
+      </div>
+      <div class="note" style="margin-top:0">⚠ Rate-limit safeguard: login is cached per session. Max 1 login per 30 min to protect your account.</div>
+    </div>
+
+    <div id="csvForm" style="display:none">
+      <div class="field"><label>CSV — one row per interval (YYYY-MM-DD,HH:MM,kWh)</label><textarea id="csvData" placeholder="2025-05-01,08:00,0.31&#10;2025-05-01,09:00,1.23"></textarea></div>
+    </div>
+    <div id="sampleForm" style="display:none">
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">Generates a realistic 7-day 5 kW dataset with live Nordpool prices — no login needed.</div>
+    </div>
+  </div>
+
+  <div id="tokenStatus" style="font-size:11px;font-family:var(--mono);padding:8px 0;line-height:1.6"></div>
+
+  <button class="btn-primary" id="fetchBtn" onclick="runFetch()">Fetch data & generate report</button>
+  <div class="status" id="setupStatus"></div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">Eloverblik — consumption data <span style="font-size:10px;font-weight:400;color:var(--accent);margin-left:6px">optional — enables real self-use savings</span></div>
+    <div class="note" style="margin-bottom:12px">
+      Eloverblik is Energinet's official smart meter data hub. Connecting it gives the dashboard your real hourly household consumption, making self-use and savings figures accurate instead of estimated.<br><br>
+      <strong style="color:var(--text)">Get your token:</strong> Log in to <a href="https://eloverblik.dk" target="_blank">eloverblik.dk</a> with MitID → click the person icon (top right) → <strong>Datadeling</strong> → <strong>Opret Token</strong> → copy it here. Token is read-only and stays in your browser only.
+    </div>
+    <div class="field"><label>Eloverblik refresh token (optional)</label><input type="password" id="eloToken" placeholder="Paste token here" autocomplete="off" style="font-family:var(--mono);font-size:12px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">Note: eloverblik data has a 1-day delay — yesterday's consumption is not yet available. Leave blank to skip.</div>
+  </div>
+
+</div>
+
+<!-- ── INSIGHTS ── -->
+<div class="section" id="sec-insights">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Insights</div>
+      <div class="section-sub" id="insightsSub">—</div>
+    </div>
+  </div>
+  <div id="insightsPanel"><div style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0">Run Setup to load data</div></div>
+</div>
+
+<!-- ── REPORT ── -->
+<div class="section" id="sec-report">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Export revenue</div>
+      <div class="section-sub" id="reportSub">—</div>
+    </div>
+    <button class="btn-sm" onclick="exportCSV()">↓ CSV</button>
+  </div>
+
+  <div class="res-row" id="reportResRow">
+    <button class="res-btn" onclick="setReportRes('5m')">5 min</button>
+    <button class="res-btn" onclick="setReportRes('15m')">15 min</button>
+    <button class="res-btn active" onclick="setReportRes('hour')">Hourly</button>
+    <button class="res-btn" onclick="setReportRes('day')">Daily</button>
+  </div>
+
+  <div class="metrics-grid" id="reportMetrics"></div>
+
+  <div class="card">
+    <div class="chart-legend">
+      <span><span class="legend-dot" style="background:#4ade80"></span>Export profit</span>
+      <span><span class="legend-dot" style="background:#f59e0b"></span>Self-use savings</span>
+      <span><span class="legend-dot" style="background:rgba(248,113,113,0.6)"></span>Grid import cost</span>
+    </div>
+    <div class="chart-wrap"><canvas id="reportChart" role="img" aria-label="Revenue, savings and grid cost chart"></canvas></div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Period</th>
+          <th>Export (kWh)</th>
+          <th>Self-use (kWh)</th>
+          <th>Spot (DKK/kWh)</th>
+          <th class="col-rev">Export profit</th>
+          <th style="color:var(--accent3)">Self-use savings</th>
+          <th class="col-gp">Total value</th>
+          <th style="color:var(--danger)">Grid cost</th>
+          <th>Net cost</th>
+          <th>Level</th>
+        </tr></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRICES ── -->
+<div class="section" id="sec-prices">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Nordpool prices</div>
+      <div class="section-sub" id="pricesSub">—</div>
+    </div>
+  </div>
+
+  <div class="metrics-grid" id="priceMetrics"></div>
+
+  <div class="card">
+    <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Price windows</div>
+    <div class="metrics-grid" id="priceWindows" style="grid-template-columns:repeat(2,1fr)"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Avg price by hour of day</div>
+    <div class="chart-wrap"><canvas id="priceHourChart" role="img" aria-label="Average price by hour of day"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Daily price range</div>
+    <div class="chart-legend">
+      <span><span class="legend-dot" style="background:rgba(248,113,113,0.6)"></span>Daily peak</span>
+      <span><span class="legend-dot" style="background:rgba(96,165,250,0.5)"></span>Daily avg</span>
+      <span><span class="legend-dot" style="background:rgba(74,222,128,0.5)"></span>Daily off-peak</span>
+    </div>
+    <div class="chart-wrap"><canvas id="priceDayChart" role="img" aria-label="Daily price range chart"></canvas></div>
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>MTU start</th><th>Spot (DKK/kWh)</th><th>Net to you (DKK/kWh)</th><th>Window</th><th>Level</th></tr></thead>
+        <tbody id="priceBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRODUCTION ── -->
+<div class="section" id="sec-production">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Production</div>
+      <div class="section-sub" id="prodSub">—</div>
+    </div>
+  </div>
+
+  <div class="res-row" id="prodResRow">
+    <button class="res-btn" onclick="setProdRes('5m')">5 min</button>
+    <button class="res-btn" onclick="setProdRes('15m')">15 min</button>
+    <button class="res-btn active" onclick="setProdRes('hour')">Hourly</button>
+    <button class="res-btn" onclick="setProdRes('day')">Daily</button>
+  </div>
+
+  <div class="metrics-grid" id="prodMetrics"></div>
+  <div class="card">
+    <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Production (kWh)</div>
+    <div class="chart-legend">
+      <span><span class="legend-dot" style="background:rgba(245,158,11,0.4)"></span>Gross production</span>
+      <span><span class="legend-dot" style="background:rgba(96,165,250,0.5)"></span>Export to grid</span>
+    </div>
+    <div class="chart-wrap"><canvas id="prodChartKwh" role="img" aria-label="Production kWh chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Financial value (DKK)</div>
+    <div class="chart-legend">
+      <span><span class="legend-dot" style="background:#4ade80"></span>Export revenue</span>
+      <span><span class="legend-dot" style="background:#f59e0b"></span>Self-use savings</span>
+    </div>
+    <div class="chart-wrap"><canvas id="prodChartDkk" role="img" aria-label="Production financial value chart"></canvas></div>
+  </div>
+  <div class="card" id="prodTableCard" style="padding:0;overflow:hidden">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Period</th><th>Gross (kWh)</th><th>Export (kWh)</th><th>Self-use (kWh)</th><th class="col-rev">Export revenue</th><th style="color:var(--accent3)">Self-use savings</th><th class="col-gp">Total value</th></tr></thead>
+        <tbody id="prodBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONSUMPTION ── -->
+<div class="section" id="sec-consumption">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Consumption</div>
+      <div class="section-sub" id="consSub">—</div>
+    </div>
+  </div>
+
+  <div id="consNoData" style="display:none">
+    <div class="note">
+      No Eloverblik data loaded. Add your refresh token in Setup to see real consumption data.<br>
+      <strong style="color:var(--text)">How to get it:</strong> eloverblik.dk → MitID → person icon → Datadeling → Opret Token.
+    </div>
+  </div>
+
+  <div id="consData">
+    <div class="res-row" id="consResRow">
+      <button class="res-btn" onclick="setConsRes('hour')">Hourly</button>
+      <button class="res-btn active" onclick="setConsRes('day')">Daily</button>
+    </div>
+
+    <div class="metrics-grid" id="consMetrics"></div>
+
+    <div class="card">
+      <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Grid import vs self-use (kWh)</div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:rgba(248,113,113,0.6)"></span>Grid import</span>
+        <span><span class="legend-dot" style="background:#f59e0b"></span>Solar self-use</span>
+      </div>
+      <div class="chart-wrap"><canvas id="consChartKwh" role="img" aria-label="Consumption breakdown kWh chart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">Grid import cost vs self-use savings (DKK)</div>
+      <div class="chart-legend">
+        <span><span class="legend-dot" style="background:rgba(248,113,113,0.6)"></span>Grid import cost</span>
+        <span><span class="legend-dot" style="background:#f59e0b"></span>Self-use savings</span>
+      </div>
+      <div class="chart-wrap"><canvas id="consChartDkk" role="img" aria-label="Consumption cost chart"></canvas></div>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Period</th>
+            <th>Grid import (kWh)</th>
+            <th>Self-use (kWh)</th>
+            <th>Total load (kWh)</th>
+            <th style="color:var(--danger)">Grid import cost (DKK)</th>
+            <th style="color:var(--accent3)">Self-use savings (DKK)</th>
+            <th class="col-gp">Net cost (DKK)</th>
+          </tr></thead>
+          <tbody id="consBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let state = { area:'DK1', mode:'pass', prices:[], production:[], report:[], preset:'7d', prodRes:'hour', reportRes:'hour', consRes:'day' };
+let prodChartKwh=null, prodChartDkk=null, reportChart=null, consChartKwh=null, consChartDkk=null, priceHourChart=null, priceDayChart=null;
+
+
+// ── TOKEN PERSISTENCE ──
+// Tokens are stored in localStorage with a timestamp. They expire after TOKEN_TTL_DAYS.
+// Nothing is sent anywhere — it stays entirely in the user's browser.
+const TOKEN_TTL_DAYS = 30;
+const TOKEN_KEYS = {
+  gwToken:  'solar_gwToken',
+  gwUser:   'solar_gwUser',
+  gwPass:   'solar_gwPass',
+  eloToken: 'solar_eloToken',
+};
+
+function saveTokens() {
+  const now = Date.now();
+  Object.entries(TOKEN_KEYS).forEach(([fieldId, storageKey]) => {
+    const el = document.getElementById(fieldId);
+    if(!el) return;
+    const val = el.value.trim();
+    if(val) {
+      localStorage.setItem(storageKey, JSON.stringify({ value: val, saved: now }));
+    }
+  });
+  updateTokenStatus();
+}
+
+function loadTokens() {
+  const ttl = TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+  const now  = Date.now();
+  let anyLoaded = false;
+  Object.entries(TOKEN_KEYS).forEach(([fieldId, storageKey]) => {
+    const el = document.getElementById(fieldId);
+    if(!el) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(stored && stored.value && (now - stored.saved) < ttl) {
+        el.value = stored.value;
+        anyLoaded = true;
+      } else if(stored) {
+        localStorage.removeItem(storageKey); // expired — clean up
+      }
+    } catch(e) { localStorage.removeItem(storageKey); }
+  });
+  updateTokenStatus();
+  return anyLoaded;
+}
+
+function clearTokens() {
+  Object.values(TOKEN_KEYS).forEach(k => localStorage.removeItem(k));
+  Object.keys(TOKEN_KEYS).forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  updateTokenStatus();
+}
+
+function updateTokenStatus() {
+  const el = document.getElementById('tokenStatus');
+  if(!el) return;
+  const ttl = TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const saved = Object.values(TOKEN_KEYS).some(k => {
+    try {
+      const s = JSON.parse(localStorage.getItem(k)||'null');
+      return s && s.value && (now - s.saved) < ttl;
+    } catch(e){ return false; }
+  });
+  // Find oldest saved date
+  let oldestDate = null;
+  Object.values(TOKEN_KEYS).forEach(k => {
+    try {
+      const s = JSON.parse(localStorage.getItem(k)||'null');
+      if(s && s.saved) {
+        const expires = new Date(s.saved + ttl);
+        if(!oldestDate || expires < oldestDate) oldestDate = expires;
+      }
+    } catch(e){}
+  });
+  if(saved && oldestDate) {
+    el.innerHTML = `<span style="color:var(--accent)">✓ Credentials saved locally</span> — expires ${oldestDate.toLocaleDateString('da-DK')} · <button onclick="clearTokens()" style="background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer;font-family:var(--mono);padding:0">Clear saved</button>`;
+  } else {
+    el.innerHTML = `<span style="color:var(--muted)">No saved credentials — will be remembered for ${TOKEN_TTL_DAYS} days after first fetch</span>`;
+  }
+}
+
+
+
+// ── INIT ──
+setPreset('7d');
+updateCostTotal();
+loadTokens(); // restore saved credentials from localStorage
+
+// ── DATE PRESETS ──
+function fmt(d){ return d.toISOString().slice(0,10); }
+function fmtDisplay(from,to){ return from===to ? from : `${from} → ${to}`; }
+
+function setPreset(p){
+  state.preset = p;
+  document.querySelectorAll('.date-bar .preset-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.date-bar .preset-btn').forEach(b=>{
+    if(b.getAttribute('onclick')?.includes("'"+p+"'")) b.classList.add('active');
+  });
+
+  const now = new Date();
+  const today = fmt(now);
+  let from, to;
+
+  if(p==='today')     { from=to=today; }
+  else if(p==='yesterday') { const y=new Date(now); y.setDate(y.getDate()-1); from=to=fmt(y); }
+  else if(p==='7d')   { const f=new Date(now); f.setDate(f.getDate()-6); from=fmt(f); to=today; }
+  else if(p==='30d')  { const f=new Date(now); f.setDate(f.getDate()-29); from=fmt(f); to=today; }
+  else if(p==='mtd')  { from=today.slice(0,8)+'01'; to=today; }
+  else if(p==='custom'){ document.getElementById('customDates').style.display='flex'; return; }
+
+  document.getElementById('customDates').style.display='none';
+  document.getElementById('dateFrom').value=from;
+  document.getElementById('dateTo').value=to;
+}
+
+// ── AREA / MODE ──
+function setArea(a){
+  state.area=a;
+  ['DK1','DK2'].forEach(x=>document.getElementById('a'+x).classList.toggle('active',x===a));
+}
+function setMode(m){
+  state.mode=m;
+  ['Token','Pass','CSV','Sample'].forEach(x=>{
+    const el=document.getElementById('m'+x); if(el) el.classList.toggle('active',x.toLowerCase()===m);
+  });
+  document.getElementById('tokenForm').style.display=m==='token'?'block':'none';
+  document.getElementById('passForm').style.display =m==='pass' ?'block':'none';
+  document.getElementById('csvForm').style.display  =m==='csv'  ?'block':'none';
+  document.getElementById('sampleForm').style.display=m==='sample'?'block':'none';
+}
+function updateCostTotal(){
+  const n=parseFloat(document.getElementById('costNrgi').value)||0;
+  const e=parseFloat(document.getElementById('costEnergi').value)||0;
+  document.getElementById('costTotal').textContent=`${(n+e).toFixed(1)} øre/kWh`;
+}
+function getTotalDeduction(){ return ((parseFloat(document.getElementById('costNrgi').value)||0)+(parseFloat(document.getElementById('costEnergi').value)||0))/100; }
+function getConsumerTariff(){ return parseFloat(document.getElementById('consumerTariff').value)||0.55084; }
+
+// ── TABS ──
+function switchTab(t){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+t).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{ if(b.getAttribute('onclick')?.includes("'"+t+"'")) b.classList.add('active'); });
+}
+
+// ── STATUS ──
+function showStatus(msg,type){
+  const el=document.getElementById('setupStatus');
+  el.textContent=msg; el.className='status '+type;
+}
+
+function updateBadges({ growatt, elo } = {}) {
+  if(growatt !== undefined) {
+    const el = document.getElementById('growattBadge');
+    if(growatt === 'ok') {
+      el.textContent = `Growatt ✓ ${_gwCache.sn||''}`;
+      el.style.background = 'rgba(74,222,128,0.15)';
+      el.style.color = 'var(--accent)';
+    } else if(growatt === 'sample') {
+      el.textContent = 'Growatt ~ sample';
+      el.style.background = 'rgba(245,158,11,0.15)';
+      el.style.color = 'var(--accent3)';
+    } else if(growatt === 'error') {
+      el.textContent = 'Growatt ✗';
+      el.style.background = 'rgba(248,113,113,0.15)';
+      el.style.color = 'var(--danger)';
+    } else {
+      el.textContent = 'Growatt —';
+      el.style.background = 'rgba(255,255,255,0.06)';
+      el.style.color = 'var(--muted)';
+    }
+  }
+  if(elo !== undefined) {
+    const el = document.getElementById('eloBadge');
+    if(elo === 'ok') {
+      el.textContent = 'Eloverblik ✓';
+      el.style.background = 'rgba(74,222,128,0.15)';
+      el.style.color = 'var(--accent)';
+    } else if(elo === 'skip') {
+      el.textContent = 'Eloverblik —';
+      el.style.background = 'rgba(255,255,255,0.06)';
+      el.style.color = 'var(--muted)';
+    } else if(elo === 'error') {
+      el.textContent = 'Eloverblik ✗';
+      el.style.background = 'rgba(248,113,113,0.15)';
+      el.style.color = 'var(--danger)';
+    }
+  }
+}
+
+// ── DATE RANGE ──
+function dateRange(){
+  const from=new Date(document.getElementById('dateFrom').value);
+  const to=new Date(document.getElementById('dateTo').value);
+  const days=[];
+  for(let d=new Date(from);d<=to;d.setDate(d.getDate()+1)) days.push(fmt(new Date(d)));
+  return days;
+}
+
+// ── UTILS ──
+function minsToHHMM(m){ return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); }
+function mtuEnd(hhmm){ const [h,m]=hhmm.split(':').map(Number),t=h*60+m+15; return t>=1440?'00:00':minsToHHMM(t); }
+function slotKey(date,time){ return date+'T'+time; }
+function priceLevel(p){ if(p>=1.5) return '<span class="tag tag-high">High</span>'; if(p>=1.0) return '<span class="tag tag-mid">Mid</span>'; return '<span class="tag tag-low">Low</span>'; }
+
+// Convert a UTC Date object to Danish local time (CET=UTC+1, CEST=UTC+2)
+// Returns { date: 'YYYY-MM-DD', hour: HH, time: 'HH:MM' }
+function utcToDanish(dt, minuteOffset=0) {
+  // Use Intl to get the correct Danish offset including DST
+  const danishStr = dt.toLocaleString('sv-SE', { timeZone: 'Europe/Copenhagen' });
+  // sv-SE gives ISO-like format: "YYYY-MM-DD HH:MM:SS"
+  const [datePart, timePart] = danishStr.split(' ');
+  const [hh, mm] = timePart.split(':').map(Number);
+  // Apply any additional minute offset (e.g. for Nordpool MTU position)
+  if(minuteOffset === 0) {
+    return { date: datePart, hour: hh, time: String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0') };
+  }
+  const totalMins = hh*60 + mm + minuteOffset;
+  const adjDate = new Date(dt.getTime() + minuteOffset*60000);
+  const adjStr = adjDate.toLocaleString('sv-SE', { timeZone: 'Europe/Copenhagen' });
+  const [adjDatePart, adjTimePart] = adjStr.split(' ');
+  const [ahh, amm] = adjTimePart.split(':').map(Number);
+  return { date: adjDatePart, hour: ahh, time: String(ahh).padStart(2,'0')+':'+String(amm).padStart(2,'0') };
+}
+
+// ── PROXY ──
+// Routes requests through Cloudflare Worker to bypass CORS restrictions
+const PROXY = 'https://solar-proxy.prfe.workers.dev';
+function proxied(url) { return `${PROXY}?url=${encodeURIComponent(url)}`; }
+
+// ── NORDPOOL FETCH ──
+async function fetchNordpool(){
+  const days=dateRange(),area=state.area,prices=[];
+
+  for(const day of days){
+    try{
+      const r=await fetch(proxied(`https://dataportal-api.nordpoolgroup.com/api/DayAheadPrices?date=${day}&market=DayAhead&deliveryArea=${area}&currency=DKK&resolution=PT15M`));
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const d=await r.json();
+      const entries=d.multiAreaEntries||[];
+      if(!entries.length) throw new Error('empty');
+      for(const row of entries){
+        const priceRaw=row.entryPerArea?.[area];
+        if(priceRaw===undefined) continue;
+        const dt=new Date(row.deliveryStart);
+        const danish = utcToDanish(dt);
+        prices.push({date:danish.date, time:danish.time, price:+(+priceRaw/1000).toFixed(4)});
+      }
+    }catch(e){ prices.push(...generateSamplePrices([day])); }
+  }
+  return prices;
+}
+
+// ── ELOVERBLIK — consumption data ──
+// Danish AMS smart meters measure grid import and export separately.
+// Eloverblik reports grid import (what you drew FROM the grid) per hour.
+// Growatt pac gives gross inverter output per interval.
+// Therefore: selfUse = grossFromInverter - netExportToGrid (per interval)
+// gridImport from eloverblik is shown as a cross-check metric.
+
+let _eloAccessToken = null;
+let _eloAccessExpiry = 0;
+let _eloMeteringPoint = null;
+
+async function fetchEloverblik(days) {
+  const refreshToken = document.getElementById('eloToken').value.trim();
+  if(!refreshToken) return null; // optional — skip if not provided
+
+  const BASE = 'https://api.eloverblik.dk/CustomerApi/api';
+  const now  = Date.now();
+
+  // Step 1: exchange refresh token for short-lived access token (cache 23h)
+  if(!_eloAccessToken || now > _eloAccessExpiry) {
+    showStatus('Authenticating with Eloverblik…', 'loading');
+    const tokenRes = await fetch(`${BASE}/Token`, {
+      headers: { 'Authorization': `Bearer ${refreshToken}` }
+    });
+    if(!tokenRes.ok) throw new Error('Eloverblik token rejected (HTTP '+tokenRes.status+') — check your refresh token');
+    const tokenData = await tokenRes.json();
+    _eloAccessToken = tokenData.result;
+    _eloAccessExpiry = now + 23*60*60*1000;
+  }
+
+  const headers = { 'Authorization': `Bearer ${_eloAccessToken}`, 'Content-Type': 'application/json' };
+
+  // Step 2: get metering point ID (cache it)
+  if(!_eloMeteringPoint) {
+    const mpRes = await fetch(`${BASE}/MeteringPoints/MeteringPoints?includeAll=false`, { headers });
+    if(!mpRes.ok) throw new Error('Could not fetch metering points from Eloverblik');
+    const mpData = await mpRes.json();
+    const pts = mpData.result || [];
+    if(!pts.length) throw new Error('No metering points found on this Eloverblik account');
+    _eloMeteringPoint = pts[0].meteringPointId;
+  }
+
+  // Step 3: fetch hourly time series (grid import per hour)
+  showStatus(`Fetching consumption from Eloverblik…`, 'loading');
+  const tsRes = await fetch(
+    `${BASE}/MeterData/GetTimeSeries/${days[0]}/${days[days.length-1]}/Hour`,
+    { method:'POST', headers, body: JSON.stringify({ meteringPoints:{ meteringPoint:[_eloMeteringPoint] } }) }
+  );
+  if(!tsRes.ok) throw new Error('Eloverblik time series fetch failed (HTTP '+tsRes.status+')');
+  const tsData = await tsRes.json();
+
+  // Parse CIM-style JSON response into hourly map — converted to Danish local time
+  const gridImport = {}; // "YYYY-MM-DD HH:00" → kWh imported from grid (Danish time)
+  const timeSeries = tsData.result?.[0]?.MyEnergyData_MarketDocument?.TimeSeries || [];
+  for(const ts of timeSeries) {
+    for(const period of (ts.Period||[])) {
+      const startDt = new Date(period.timeInterval?.start || '');
+      for(const pt of (period.Point||[])) {
+        const pos = parseInt(pt['position'])-1;
+        const kwh = parseFloat(pt['out_Quantity.quantity'] || pt['quantity'] || 0);
+        // Each position is 1 hour after start — convert the resulting UTC time to Danish local
+        const utcDt  = new Date(startDt.getTime() + pos*3600000);
+        const danish = utcToDanish(utcDt);
+        const key = `${danish.date} ${String(danish.hour).padStart(2,'0')}:00`;
+        gridImport[key] = (gridImport[key]||0) + kwh;
+      }
+    }
+  }
+  return gridImport; // "YYYY-MM-DD HH:00" → kWh from grid (Danish local time)
+}
+
+// Enrich production rows with real self-use derived from gross pac data
+// selfUse = grossFromInverter - netExportToGrid (per interval)
+// gridImport from eloverblik is stored for display
+function applyConsumption(productionRows, gridImportMap) {
+  if(!gridImportMap || Object.keys(gridImportMap).length===0) return productionRows;
+  return productionRows.map(r => {
+    const grossKwh = r.grossKwh || r.kwh;
+    const selfUse  = +Math.max(0, grossKwh - r.kwh).toFixed(4);
+    const hourKey  = r.date+' '+r.time.slice(0,2)+':00';
+    const gridImp  = gridImportMap[hourKey] || 0;
+    return { ...r, selfUse, grossKwh, gridImport: gridImp };
+  });
+}
+
+function generateSamplePrices(days){
+  const base=[0.8,0.7,0.65,0.6,0.62,0.7,0.9,1.2,1.5,1.7,1.6,1.4,1.3,1.2,1.1,1.0,1.1,1.5,1.8,1.7,1.4,1.1,0.95,0.85];
+  return days.flatMap(day=>Array.from({length:96},(_,i)=>({
+    date:day, time:minsToHHMM(i*15),
+    price:Math.max(0.2,+(base[Math.floor(i/4)]+(Math.random()-.5)*0.1).toFixed(4))
+  })));
+}
+function generateSampleProduction(days){
+  const curve=[0,0,0,0,0,0,0.04,0.15,0.55,1.1,1.8,2.4,2.6,2.5,2.2,1.7,1.0,0.35,0.06,0,0,0,0,0];
+  return days.flatMap(day=>{
+    const f=0.7+Math.random()*0.6;
+    return Array.from({length:96},(_,i)=>{
+      const gross=+(curve[Math.floor(i/4)]*f/4+(Math.random()*0.03)).toFixed(4);
+      // self-use is 10-40% of gross (simulated home consumption during daylight)
+      const selfUse=gross>0.005?+(gross*(0.1+Math.random()*0.3)).toFixed(4):0;
+      const kwh=+(gross-selfUse).toFixed(4); // export = gross minus self-use
+      return gross>0.005?{date:day,time:minsToHHMM(i*15),kwh,grossKwh:gross,selfUse}:null;
+    }).filter(Boolean);
+  });
+}
+
+// ── GROWATT V1 API — MIN / MOD / MID / SPH series (token auth) ──
+const _v1Cache={plantId:null,sn:null,plantName:''};
+
+async function fetchGrowattV1(){
+  const token=document.getElementById('gwToken').value.trim();
+  if(!token) throw new Error('Paste your Growatt API token first');
+  const days=dateRange();
+  const rows=[];
+  const headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+
+  // Get plant
+  if(!_v1Cache.plantId){
+    showStatus('Connecting to Growatt V1 API…','loading');
+    const plantRes=await fetch(proxied('https://openapi.growatt.com/v1/plant/list?page=1&limit=20'),{headers});
+    if(!plantRes.ok) throw new Error('Token rejected (HTTP '+plantRes.status+') — regenerate your token in ShinePhone');
+    const plantData=await plantRes.json();
+    const plants=plantData.data?.plants||plantData.data?.data||[];
+    if(!plants.length) throw new Error('No plants found on this account');
+    _v1Cache.plantId=plants[0].plant_id||plants[0].id;
+    _v1Cache.plantName=plants[0].plant_name||plants[0].name||'';
+
+    // Get device serial
+    const devRes=await fetch(proxied(`https://openapi.growatt.com/v1/device/list?plant_id=${_v1Cache.plantId}&page=1&limit=20`),{headers});
+    const devData=await devRes.json();
+    const devices=devData.data?.devices||devData.data?.data||[];
+    if(!devices.length) throw new Error('No devices found under your plant');
+    _v1Cache.sn=devices[0].device_sn||devices[0].sn;
+  }
+
+  showStatus(`Connected · ${_v1Cache.plantName} · ${_v1Cache.sn}. Fetching ${days.length} day(s)…`,'loading');
+
+  for(const day of days){
+    await new Promise(r=>setTimeout(r,300));
+    try{
+      // Try both common V1 endpoints — different device types use different ones
+      let points=[];
+      const eRes=await fetch(proxied(`https://openapi.growatt.com/v1/device/energy?device_sn=${_v1Cache.sn}&date=${day}&type=day`),{headers});
+      if(eRes.ok){
+        const eData=await eRes.json();
+        points=eData.data?.energy||eData.data?.pac||[];
+      }
+      for(const pt of points){
+        const time=(pt.time||'00:00').slice(0,5);
+        // V1 returns pac in W — convert to kWh over the interval
+        const pacW=parseFloat(pt.pac??pt.power??0);
+        // also check for direct etoday-style incremental field
+        const kwhDirect=parseFloat(pt.kwh??pt.etoday_increment??0);
+        const kwh=kwhDirect>0 ? +kwhDirect.toFixed(4) : +(pacW*(5/60)/1000).toFixed(4);
+        if(kwh>0.001&&kwh<3.0) rows.push({date:day,time,kwh,grossKwh:kwh,selfUse:0});
+      }
+    }catch(e){ /* skip day */ }
+  }
+  return rows;
+}
+
+// ── GROWATT CLASSIC API — MIC 3000TL-X ──
+// Safeguards:
+//   1. Session cache  — logs in once per browser session only
+//   2. Rate-limit guard — min 30 min between logins
+//   3. Request throttle — 400 ms gap between day requests
+//   4. Delta calc — derives per-5-min kWh from pac (watts) readings
+//   5. Sanity clamp — ignores intervals > 2 kWh (impossible for 3 kW inverter)
+
+const _gwCache={userId:null,plantId:null,sn:null,plantName:'',lastLogin:0,cookies:null};
+const LOGIN_COOLDOWN_MS=30*60*1000;
+
+async function fetchGrowattClassic(){
+  const user=document.getElementById('gwUser').value.trim();
+  const pass=document.getElementById('gwPass').value.trim();
+  if(!user||!pass) throw new Error('Enter your Growatt email and password');
+
+  const days=dateRange();
+
+  // ── Classic API reliability note ──
+  // The etoday delta approach works well up to ~30 days. Beyond that,
+  // some MIC firmware versions return stale or cumulative values.
+  // We warn but still proceed — data may be inaccurate for older ranges.
+  const MAX_DAYS = 30;
+  if(days.length > MAX_DAYS){
+    showStatus(`⚠ ${days.length} days requested — classic API (username/password) is reliable up to ${MAX_DAYS} days. Data beyond that may be inaccurate. Fetching anyway…`, 'error');
+    await new Promise(r=>setTimeout(r, 2500)); // give user time to read
+  }
+
+  const rows=[];
+  const BASE='https://server.growatt.com';
+  const now=Date.now();
+  const needsLogin=!_gwCache.userId||(now-_gwCache.lastLogin)>LOGIN_COOLDOWN_MS;
+
+  if(needsLogin){
+    showStatus('Logging in to Growatt…','loading');
+    const pwHash=md5js(pass);
+    const loginRes = await fetch(proxied(`${BASE}/newTwoLoginAPI.do`), {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`userName=${encodeURIComponent(user)}&password=${encodeURIComponent(pwHash)}`
+    });
+    console.log('[Growatt] Login HTTP status:', loginRes.status);
+    if(!loginRes.ok) throw new Error('Login request failed (HTTP '+loginRes.status+')');
+
+    const cookieStr = loginRes.headers.get('x-growatt-cookies') || '';
+    console.log('[Growatt] Cookies received:', cookieStr || 'NONE');
+    if(cookieStr) _gwCache.cookies = cookieStr;
+
+    const loginData=await loginRes.json();
+    console.log('[Growatt] Login response:', JSON.stringify(loginData).slice(0,200));
+    if(!loginData.back?.success) throw new Error('Login failed — check your username and password');
+    _gwCache.userId=loginData.back.data.id;
+    _gwCache.lastLogin=now;
+    console.log('[Growatt] User ID:', _gwCache.userId);
+
+    const plantRes=await fetch(proxied(`${BASE}/index/getPlantListTitle?userId=${_gwCache.userId}`), {
+      headers: _gwCache.cookies ? {'Cookie': _gwCache.cookies} : {}
+    });
+    const plantData=await plantRes.json();
+    console.log('[Growatt] Plant response:', JSON.stringify(plantData).slice(0,200));
+    if(!plantData.back?.length) throw new Error('No plants found on this account');
+    _gwCache.plantId=plantData.back[0].id;
+    _gwCache.plantName=plantData.back[0].plantName||'';
+    console.log('[Growatt] Plant ID:', _gwCache.plantId, 'Name:', _gwCache.plantName);
+
+    const devRes=await fetch(proxied(`${BASE}/panel/getDevicesByPlantList?plantId=${_gwCache.plantId}&currPage=1`), {
+      headers: _gwCache.cookies ? {'Cookie': _gwCache.cookies} : {}
+    });
+    const devData=await devRes.json();
+    console.log('[Growatt] Device response:', JSON.stringify(devData).slice(0,200));
+    const devices=devData.back?.datas||[];
+    if(!devices.length) throw new Error('No devices found under your plant');
+    _gwCache.sn=devices[0].sn;
+    console.log('[Growatt] Device SN:', _gwCache.sn);
+    showStatus(`Logged in · ${_gwCache.plantName} · ${_gwCache.sn}. Fetching ${days.length} day(s)…`,'loading');
+  } else {
+    showStatus(`Session cached · ${_gwCache.sn}. Fetching ${days.length} day(s)…`,'loading');
+  }
+
+  for(const day of days){
+    await new Promise(r=>setTimeout(r,400));
+    try{
+      const res=await fetch(proxied(`${BASE}/device/getDeviceEnergyDayChart?sn=${_gwCache.sn}&date=${day}`), {
+        headers: _gwCache.cookies ? {'Cookie': _gwCache.cookies} : {}
+      });
+      if(!res.ok){ console.log('[Growatt] Energy chart HTTP error:', res.status, day); continue; }
+      const data=await res.json();
+      console.log('[Growatt] Energy data for', day, '— keys:', Object.keys(data.back||{}).join(', '));
+      if(!res.ok) continue;
+      const data=await res.json();
+      const back=data.back||{};
+      const timePoints=back.time||[];
+
+      // ── Strategy: prefer etoday (cumulative kWh today, resets midnight) ──
+      // Compute deltas between consecutive readings → actual kWh per interval.
+      // Fall back to pac (watts) only if etoday is absent.
+      const etodayPoints = back.etoday || back.eToday || [];
+      const pacPoints    = back.pac    || back.Pac    || [];
+
+      if(etodayPoints.length > 0){
+        // etoday delta approach — most accurate for historical data
+        let prevEtoday = 0;
+        for(let i=0;i<etodayPoints.length;i++){
+          const cumulative = parseFloat(etodayPoints[i]) || 0;
+          const rawTime    = timePoints[i] || minsToHHMM(i*5);
+          const timeStr    = rawTime.toString().slice(0,5);
+
+          // Delta = production in this interval
+          // Guard: etoday only goes up within a day; negative delta = bad data
+          let kwh = +(cumulative - prevEtoday).toFixed(4);
+          if(kwh < 0) kwh = 0;           // ignore negative (bad reading)
+          if(kwh > 1.5) kwh = 0;         // sanity: MIC 3kW can't do >1.5 kWh in 5 min
+
+          prevEtoday = cumulative > 0 ? cumulative : prevEtoday; // don't reset on zero reads
+
+          if(kwh > 0.001) rows.push({date:day, time:timeStr, kwh, grossKwh:kwh, selfUse:0});
+        }
+      } else if(pacPoints.length > 0){
+        // Fallback: pac in watts → kWh over 5-min interval
+        for(let i=0;i<pacPoints.length;i++){
+          const pacW   = parseFloat(pacPoints[i]) || 0;
+          const rawTime= timePoints[i] || minsToHHMM(i*5);
+          const timeStr= rawTime.toString().slice(0,5);
+          const kwh    = +(pacW * (5/60) / 1000).toFixed(4);
+          // Sanity clamp: pac in watts for a 3kW inverter should never exceed ~3000W
+          if(kwh > 0.001 && pacW < 3500) rows.push({date:day, time:timeStr, kwh, grossKwh:kwh, selfUse:0});
+        }
+      }
+    }catch(e){ /* skip bad day silently */ }
+  }
+  return rows;
+}
+
+// ── Inline MD5 (Growatt classic API requires MD5-hashed passwords) ──
+function md5js(s){
+  function sa(x,y){var l=(x&0xFFFF)+(y&0xFFFF);return(((x>>16)+(y>>16)+(l>>16))<<16)|(l&0xFFFF);}
+  function rl(n,c){return(n<<c)|(n>>>(32-c));}
+  function cm(q,a,b,x,s,t){return sa(rl(sa(sa(a,q),sa(x,t)),s),b);}
+  function ff(a,b,c,d,x,s,t){return cm((b&c)|((~b)&d),a,b,x,s,t);}
+  function gg(a,b,c,d,x,s,t){return cm((b&d)|(c&(~d)),a,b,x,s,t);}
+  function hh(a,b,c,d,x,s,t){return cm(b^c^d,a,b,x,s,t);}
+  function ii(a,b,c,d,x,s,t){return cm(c^(b|(~d)),a,b,x,s,t);}
+  var bs=8*s.length,x=[],i;
+  for(i=0;i<bs;i+=8)x[i>>5]|=(s.charCodeAt(i/8)&0xFF)<<(i%32);
+  x[bs>>5]|=0x80<<(bs%32);x[(((bs+64)>>>9)<<4)+14]=bs;
+  var a=1732584193,b=-271733879,c=-1732584194,d=271733878,oa,ob,oc,od;
+  for(i=0;i<x.length;i+=16){
+    oa=a;ob=b;oc=c;od=d;
+    a=ff(a,b,c,d,x[i+0],7,-680876936);d=ff(d,a,b,c,x[i+1],12,-389564586);c=ff(c,d,a,b,x[i+2],17,606105819);b=ff(b,c,d,a,x[i+3],22,-1044525330);
+    a=ff(a,b,c,d,x[i+4],7,-176418897);d=ff(d,a,b,c,x[i+5],12,1200080426);c=ff(c,d,a,b,x[i+6],17,-1473231341);b=ff(b,c,d,a,x[i+7],22,-45705983);
+    a=ff(a,b,c,d,x[i+8],7,1770035416);d=ff(d,a,b,c,x[i+9],12,-1958414417);c=ff(c,d,a,b,x[i+10],17,-42063);b=ff(b,c,d,a,x[i+11],22,-1990404162);
+    a=ff(a,b,c,d,x[i+12],7,1804603682);d=ff(d,a,b,c,x[i+13],12,-40341101);c=ff(c,d,a,b,x[i+14],17,-1502002290);b=ff(b,c,d,a,x[i+15],22,1236535329);
+    a=gg(a,b,c,d,x[i+1],5,-165796510);d=gg(d,a,b,c,x[i+6],9,-1069501632);c=gg(c,d,a,b,x[i+11],14,643717713);b=gg(b,c,d,a,x[i+0],20,-373897302);
+    a=gg(a,b,c,d,x[i+5],5,-701558691);d=gg(d,a,b,c,x[i+10],9,38016083);c=gg(c,d,a,b,x[i+15],14,-660478335);b=gg(b,c,d,a,x[i+4],20,-405537848);
+    a=gg(a,b,c,d,x[i+9],5,568446438);d=gg(d,a,b,c,x[i+14],9,-1019803690);c=gg(c,d,a,b,x[i+3],14,-187363961);b=gg(b,c,d,a,x[i+8],20,1163531501);
+    a=gg(a,b,c,d,x[i+13],5,-1444681467);d=gg(d,a,b,c,x[i+2],9,-51403784);c=gg(c,d,a,b,x[i+7],14,1735328473);b=gg(b,c,d,a,x[i+12],20,-1926607734);
+    a=hh(a,b,c,d,x[i+5],4,-378558);d=hh(d,a,b,c,x[i+8],11,-2022574463);c=hh(c,d,a,b,x[i+11],16,1839030562);b=hh(b,c,d,a,x[i+14],23,-35309556);
+    a=hh(a,b,c,d,x[i+1],4,-1530992060);d=hh(d,a,b,c,x[i+4],11,1272893353);c=hh(c,d,a,b,x[i+7],16,-155497632);b=hh(b,c,d,a,x[i+10],23,-1094730640);
+    a=hh(a,b,c,d,x[i+13],4,681279174);d=hh(d,a,b,c,x[i+0],11,-358537222);c=hh(c,d,a,b,x[i+3],16,-722521979);b=hh(b,c,d,a,x[i+6],23,76029189);
+    a=hh(a,b,c,d,x[i+9],4,-640364487);d=hh(d,a,b,c,x[i+12],11,-421815835);c=hh(c,d,a,b,x[i+15],16,530742520);b=hh(b,c,d,a,x[i+2],23,-995338651);
+    a=ii(a,b,c,d,x[i+0],6,-198630844);d=ii(d,a,b,c,x[i+7],10,1126891415);c=ii(c,d,a,b,x[i+14],15,-1416354905);b=ii(b,c,d,a,x[i+5],21,-57434055);
+    a=ii(a,b,c,d,x[i+12],6,1700485571);d=ii(d,a,b,c,x[i+3],10,-1894986606);c=ii(c,d,a,b,x[i+10],15,-1051523);b=ii(b,c,d,a,x[i+1],21,-2054922799);
+    a=ii(a,b,c,d,x[i+8],6,1873313359);d=ii(d,a,b,c,x[i+15],10,-30611744);c=ii(c,d,a,b,x[i+6],15,-1560198380);b=ii(b,c,d,a,x[i+13],21,1309151649);
+    a=ii(a,b,c,d,x[i+4],6,-145523070);d=ii(d,a,b,c,x[i+11],10,-1120210379);c=ii(c,d,a,b,x[i+2],15,718787259);b=ii(b,c,d,a,x[i+9],21,-343485551);
+    a=sa(a,oa);b=sa(b,ob);c=sa(c,oc);d=sa(d,od);
+  }
+  var out='';
+  var words=[a,b,c,d];
+  for(var w=0;w<4;w++){var ww=words[w];for(var by=0;by<4;by++)out+=((ww>>>(by*8))&0xFF).toString(16).padStart(2,'0');}
+  return out;
+}
+
+function parseCSV(csv){
+  return csv.trim().split('\n').map(l=>{
+    const p=l.split(',');
+    return p.length>=3?{date:p[0].trim(),time:p[1].trim(),kwh:parseFloat(p[2])}:null;
+  }).filter(Boolean);
+}
+
+// ── BUILD REPORT ──
+function buildReport(){
+  const priceMap={};
+  for(const p of state.prices) priceMap[slotKey(p.date,p.time)]=p.price;
+  const deduction=getTotalDeduction();
+  state.report=state.production.map(row=>{
+    const spot=priceMap[slotKey(row.date,row.time)]??null;
+    const spotP=spot??0;
+    const netP=Math.max(0,spotP-deduction);
+    return{
+      ...row,
+      grossKwh: row.grossKwh ?? row.kwh,
+      selfUse:  row.selfUse  ?? 0,
+      spot:spotP, deduction, netPrice:netP,
+      revenue:    +(row.kwh*spotP).toFixed(5),
+      grossProfit:+(row.kwh*netP).toFixed(5)
+    };
+  });
+}
+
+// ── INSIGHTS ──
+function renderInsights(){
+  const rep   = state.report;
+  const prod  = state.production;
+  if(!rep.length){
+    document.getElementById('insightsPanel').innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:40px 0">Run Setup to load data</div>';
+    return;
+  }
+
+  const tariff      = getConsumerTariff();
+  const deduction   = getTotalDeduction();
+  const priceMap    = {};
+  for(const p of state.prices) priceMap[slotKey(p.date,p.time)] = p.price;
+
+  // ── Totals ──
+  const totalExportKwh  = prod.reduce((a,b)=>a+(b.kwh||0),0);
+  const totalGrossKwh   = prod.reduce((a,b)=>a+(b.grossKwh||b.kwh||0),0);
+  const totalSelfUse    = prod.reduce((a,b)=>a+(b.selfUse||0),0);
+  const totalExportRev  = rep.reduce((a,b)=>a+b.grossProfit,0);   // after deductions
+  const totalRevSpot    = rep.reduce((a,b)=>a+b.revenue,0);        // at raw spot
+  const totalDeducted   = totalRevSpot - totalExportRev;
+
+  // Self-use savings
+  const totalSavings = prod.reduce((a,r)=>{
+    const spot = priceMap[slotKey(r.date,r.time)] ?? 0;
+    return a + (r.selfUse||0) * (spot + tariff);
+  }, 0);
+
+  const totalValue      = totalExportRev + totalSavings;
+  const selfUsePct      = totalGrossKwh > 0 ? (totalSelfUse/totalGrossKwh*100) : 0;
+  const exportPct       = totalGrossKwh > 0 ? (totalExportKwh/totalGrossKwh*100) : 0;
+  const retainedPct     = totalRevSpot  > 0 ? (totalExportRev/totalRevSpot*100) : 0;
+  const days            = [...new Set(prod.map(r=>r.date))].sort();
+  const nDays           = days.length || 1;
+
+  // ── Per-day aggregations ──
+  const dayGross={}, dayExport={}, dayGP={}, daySavings={}, dayValue={};
+  for(const r of prod){
+    const spot = priceMap[slotKey(r.date,r.time)] ?? 0;
+    const sav  = (r.selfUse||0) * (spot + tariff);
+    dayGross[r.date]   = (dayGross[r.date]||0)   + (r.grossKwh||r.kwh||0);
+    dayExport[r.date]  = (dayExport[r.date]||0)  + (r.kwh||0);
+    daySavings[r.date] = (daySavings[r.date]||0) + sav;
+  }
+  for(const r of rep){
+    dayGP[r.date]    = (dayGP[r.date]||0)    + r.grossProfit;
+    dayValue[r.date] = (dayValue[r.date]||0) + r.grossProfit;
+  }
+  for(const d of days) dayValue[d] = (dayValue[d]||0) + (daySavings[d]||0);
+
+  const bestGrossProdDay  = Object.entries(dayGross).sort((a,b)=>b[1]-a[1])[0];
+  const bestExportRevDay  = Object.entries(dayGP).sort((a,b)=>b[1]-a[1])[0];
+  const bestSavingsDay    = Object.entries(daySavings).sort((a,b)=>b[1]-a[1])[0];
+  const bestTotalValueDay = Object.entries(dayValue).sort((a,b)=>b[1]-a[1])[0];
+  const worstValueDay     = Object.entries(dayValue).sort((a,b)=>a[1]-b[1])[0];
+
+  // ── Best/worst MTU (export gross profit) ──
+  const bestMTU  = rep.reduce((b,r)=>r.grossProfit>b.grossProfit?r:b, rep[0]);
+  const posMTUs  = rep.filter(r=>r.grossProfit>0);
+  const worstMTU = posMTUs.length ? posMTUs.reduce((b,r)=>r.grossProfit<b.grossProfit?r:b, posMTUs[0]) : bestMTU;
+
+  // ── Best MTU by combined value (export + savings) ──
+  const mtuValue = rep.map(r=>{
+    const spot = priceMap[slotKey(r.date,r.time)] ?? 0;
+    const sav  = ((r.selfUse||0)) * (spot + tariff);
+    return { ...r, totalValue: r.grossProfit + sav };
+  });
+  const bestValueMTU = mtuValue.reduce((b,r)=>r.totalValue>b.totalValue?r:b, mtuValue[0]);
+
+  // ── Peak hour of day for combined value ──
+  const hourValue={}, hourExport={};
+  for(const r of mtuValue){
+    const h = r.time.slice(0,2);
+    hourValue[h]  = (hourValue[h]||0)  + r.totalValue;
+    hourExport[h] = (hourExport[h]||0) + r.grossProfit;
+  }
+  const peakValueHour  = Object.entries(hourValue).sort((a,b)=>b[1]-a[1])[0];
+  const peakExportHour = Object.entries(hourExport).sort((a,b)=>b[1]-a[1])[0];
+
+  // ── Avg spot price during production ──
+  const avgSpot = rep.length ? rep.reduce((a,b)=>a+b.spot,0)/rep.length : 0;
+
+  const hasSelf = hasSelfUseData();
+
+  document.getElementById('insightsSub').textContent=`${nDays} days · ${prod.length} intervals · ${days[0]} → ${days[nDays-1]}`;
+
+  const selfUnavailNote = hasSelf ? '' : `
+    <div class="note" style="margin-bottom:12px">
+      ⚠ Self-use and savings data are not available from the Growatt API — only export figures are real. Connect eloverblik.dk consumption data to enable these metrics.
+    </div>`;
+
+  document.getElementById('insightsPanel').innerHTML=`
+    ${selfUnavailNote}
+
+    <!-- Summary metrics row -->
+    <div class="metrics-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px">
+      <div class="metric"><div class="metric-label">Total value</div>
+        <div class="metric-value ${hasSelf?'green':'blue'}">${hasSelf?totalValue.toFixed(2):totalExportRev.toFixed(2)}</div>
+        <div class="metric-sub">${hasSelf?'DKK (export + savings)':'DKK export only'}</div>
+      </div>
+      <div class="metric"><div class="metric-label">Gross production</div><div class="metric-value amber">${totalGrossKwh.toFixed(2)}</div><div class="metric-sub">kWh</div></div>
+      <div class="metric"><div class="metric-label">Export revenue</div><div class="metric-value blue">${totalExportRev.toFixed(2)}</div><div class="metric-sub">DKK after deductions</div></div>
+      <div class="metric"><div class="metric-label">Self-use savings</div>
+        <div class="metric-value" style="${hasSelf?'color:var(--accent3)':'color:var(--muted);font-size:14px'}">${hasSelf?totalSavings.toFixed(2):'N/A'}</div>
+        <div class="metric-sub">${hasSelf?'DKK avoided cost':'No consumption data'}</div>
+      </div>
+    </div>
+    <div class="metrics-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
+      <div class="metric"><div class="metric-label">Self-use rate</div>
+        <div class="metric-value" style="${hasSelf?'':'color:var(--muted);font-size:14px'}">${hasSelf?selfUsePct.toFixed(0)+'%':'N/A'}</div>
+        <div class="metric-sub">of gross production</div>
+      </div>
+      <div class="metric"><div class="metric-label">Export rate</div><div class="metric-value">${exportPct.toFixed(0)}%</div><div class="metric-sub">of gross production</div></div>
+      <div class="metric"><div class="metric-label">Avg/day value</div>
+        <div class="metric-value green">${hasSelf?(totalValue/nDays).toFixed(2):(totalExportRev/nDays).toFixed(2)}</div>
+        <div class="metric-sub">DKK/day</div>
+      </div>
+    </div>
+
+    <div class="insights">
+
+      <div class="insight-card">
+        <div class="insight-icon">🏆</div>
+        <div>
+          <div class="insight-title">Best day — ${hasSelf?'total value':'export revenue'}</div>
+          <div class="insight-value" style="color:var(--accent)">${hasSelf?bestTotalValueDay[1].toFixed(2):bestExportRevDay[1].toFixed(2)} DKK</div>
+          <div class="insight-body">${hasSelf
+            ? `${bestTotalValueDay[0]} · ${(dayGP[bestTotalValueDay[0]]||0).toFixed(2)} DKK export + ${(daySavings[bestTotalValueDay[0]]||0).toFixed(2)} DKK savings`
+            : `${bestExportRevDay[0]} · after ${(deduction*100).toFixed(1)} øre/kWh deductions`
+          }</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">☀️</div>
+        <div>
+          <div class="insight-title">Best production day</div>
+          <div class="insight-value" style="color:var(--accent3)">${bestGrossProdDay[1].toFixed(2)} kWh gross</div>
+          <div class="insight-body">${bestGrossProdDay[0]} · ${(dayExport[bestGrossProdDay[0]]||0).toFixed(2)} kWh exported${hasSelf?' · '+((dayGross[bestGrossProdDay[0]]||0)-(dayExport[bestGrossProdDay[0]]||0)).toFixed(2)+' kWh self-consumed':''}</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">💰</div>
+        <div>
+          <div class="insight-title">Best export revenue day</div>
+          <div class="insight-value" style="color:var(--accent2)">${bestExportRevDay[1].toFixed(2)} DKK</div>
+          <div class="insight-body">${bestExportRevDay[0]} · after ${(deduction*100).toFixed(1)} øre/kWh NRGi deductions</div>
+        </div>
+      </div>
+
+      ${hasSelf ? `
+      <div class="insight-card">
+        <div class="insight-icon">🏠</div>
+        <div>
+          <div class="insight-title">Best self-use savings day</div>
+          <div class="insight-value" style="color:var(--accent3)">${bestSavingsDay[1].toFixed(2)} DKK</div>
+          <div class="insight-body">${bestSavingsDay[0]} · avoided grid cost at spot + ${tariff.toFixed(4)} DKK/kWh tariff</div>
+        </div>
+      </div>` : ''}
+
+      <div class="insight-card">
+        <div class="insight-icon">😴</div>
+        <div>
+          <div class="insight-title">Lowest earning day</div>
+          <div class="insight-value" style="color:var(--muted)">${hasSelf?worstValueDay[1].toFixed(2):(Object.entries(dayGP).sort((a,b)=>a[1]-b[1])[0]?.[1]||0).toFixed(2)} DKK</div>
+          <div class="insight-body">${hasSelf?worstValueDay[0]:Object.entries(dayGP).sort((a,b)=>a[1]-b[1])[0]?.[0]||'—'}</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">⚡</div>
+        <div>
+          <div class="insight-title">Best single MTU — export</div>
+          <div class="insight-value" style="color:var(--accent)">${bestMTU.grossProfit.toFixed(4)} DKK</div>
+          <div class="insight-body">${bestMTU.date} · ${bestMTU.time}–${mtuEnd(bestMTU.time)} · ${bestMTU.kwh.toFixed(3)} kWh @ ${bestMTU.spot.toFixed(3)} DKK/kWh spot</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">🕐</div>
+        <div>
+          <div class="insight-title">Peak export earnings hour</div>
+          <div class="insight-value" style="color:var(--accent2)">${peakExportHour[0]}:00 – ${peakExportHour[0]}:59</div>
+          <div class="insight-body">${peakExportHour[1].toFixed(3)} DKK export revenue in this hour · avg spot ${avgSpot.toFixed(3)} DKK/kWh</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">📊</div>
+        <div>
+          <div class="insight-title">Production split</div>
+          <div class="insight-value" style="color:var(--text)">${totalGrossKwh.toFixed(1)} kWh gross</div>
+          <div class="insight-body">
+            ${totalExportKwh.toFixed(1)} kWh exported (${exportPct.toFixed(0)}%)${hasSelf
+              ? ` · ${totalSelfUse.toFixed(1)} kWh self-used (${selfUsePct.toFixed(0)}%)`
+              : ' · self-use unknown (no consumption data)'
+            } · ${totalDeducted.toFixed(2)} DKK deducted by NRGi + Energinet
+          </div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">📅</div>
+        <div>
+          <div class="insight-title">Period summary</div>
+          <div class="insight-value" style="color:var(--text)">${nDays} days</div>
+          <div class="insight-body">
+            Avg ${(totalGrossKwh/nDays).toFixed(2)} kWh/day gross · 
+            ${(totalExportRev/nDays).toFixed(2)} DKK/day export revenue${hasSelf
+              ? ` · ${(totalSavings/nDays).toFixed(2)} DKK/day savings`
+              : ''
+            }
+          </div>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+// ── RESOLUTION AGGREGATION ──
+function periodKey(date, time, res) {
+  const [h,m] = time.split(':').map(Number);
+  if(res==='5m')   return `${date} ${time}`;
+  if(res==='15m')  { const q=Math.floor(m/15)*15; return `${date} ${String(h).padStart(2,'0')}:${String(q).padStart(2,'0')}`; }
+  if(res==='hour') return `${date} ${String(h).padStart(2,'0')}:00`;
+  if(res==='day')  return date;
+  return date;
+}
+function periodLabel(key, res) {
+  if(res==='day') return key.slice(5);       // MM-DD
+  if(res==='hour') return key.slice(5,10)+' '+key.slice(11,16); // MM-DD HH:00
+  return key.slice(5);
+}
+function aggregateProduction(prod, res) {
+  const priceMap={};
+  for(const p of state.prices) priceMap[slotKey(p.date,p.time)]=p.price;
+  const tariff = getConsumerTariff();
+  const map = {};
+  for(const r of prod) {
+    const k = periodKey(r.date, r.time, res);
+    if(!map[k]) map[k] = {key:k, kwh:0, grossKwh:0, selfUse:0, savings:0, exportRev:0, count:0};
+    const spot = priceMap[slotKey(r.date,r.time)] ?? 0;
+    const selfUse = r.selfUse || 0;
+    const exportKwh = r.kwh || 0;
+    map[k].kwh      += exportKwh;
+    map[k].grossKwh += r.grossKwh || exportKwh;
+    map[k].selfUse  += selfUse;
+    // savings = avoided cost of buying this electricity from grid
+    map[k].savings  += selfUse * (spot + tariff);
+    // export revenue for reference (gross profit already in report tab)
+    map[k].exportRev+= exportKwh * Math.max(0, spot - getTotalDeduction());
+    map[k].count++;
+  }
+  return Object.values(map).sort((a,b)=>a.key.localeCompare(b.key)).map(r=>({
+    ...r,
+    kwh:       +r.kwh.toFixed(4),
+    grossKwh:  +r.grossKwh.toFixed(4),
+    selfUse:   +r.selfUse.toFixed(4),
+    savings:   +r.savings.toFixed(4),
+    exportRev: +r.exportRev.toFixed(4),
+    total:     +(r.savings + r.exportRev).toFixed(4)
+  }));
+}
+function aggregateReport(rep, res) {
+  const tariff  = getConsumerTariff();
+  const deduction = getTotalDeduction();
+  const map = {};
+  for(const r of rep) {
+    const k = periodKey(r.date, r.time, res);
+    if(!map[k]) map[k] = {key:k, kwh:0, grossKwh:0, selfUse:0, gridImport:0, revenue:0, grossProfit:0, spotSum:0, savings:0, gridCost:0, count:0, deduction:r.deduction};
+    const selfUse  = r.selfUse   || 0;
+    const gridImp  = r.gridImport|| 0;
+    const spot     = r.spot      || 0;
+    map[k].kwh        += r.kwh        || 0;
+    map[k].grossKwh   += r.grossKwh   || r.kwh;
+    map[k].selfUse    += selfUse;
+    map[k].gridImport += gridImp;
+    map[k].revenue    += r.revenue    || 0;
+    map[k].grossProfit+= r.grossProfit|| 0;
+    map[k].spotSum    += spot;
+    map[k].savings    += selfUse  * (spot + tariff);
+    map[k].gridCost   += gridImp  * (spot + tariff);
+    map[k].count++;
+  }
+  return Object.values(map).sort((a,b)=>a.key.localeCompare(b.key)).map(r=>({
+    ...r,
+    kwh:        +r.kwh.toFixed(4),
+    grossKwh:   +r.grossKwh.toFixed(4),
+    selfUse:    +r.selfUse.toFixed(4),
+    gridImport: +r.gridImport.toFixed(4),
+    revenue:    +r.revenue.toFixed(4),
+    grossProfit:+r.grossProfit.toFixed(4),
+    savings:    +r.savings.toFixed(4),
+    gridCost:   +r.gridCost.toFixed(4),
+    totalValue: +(r.grossProfit + r.savings).toFixed(4),
+    netCost:    +(r.gridCost - r.grossProfit - r.savings).toFixed(4),
+    avgSpot:    +(r.spotSum/r.count).toFixed(4)
+  }));
+}
+
+function setResBtns(rowId, res) {
+  document.querySelectorAll(`#${rowId} .res-btn`).forEach(b=>{
+    const onclick = b.getAttribute('onclick')||'';
+    b.classList.toggle('active', onclick.includes("'"+res+"'"));
+  });
+}
+function setProdRes(res) {
+  state.prodRes = res;
+  setResBtns('prodResRow', res);
+  renderProduction();
+}
+function setReportRes(res) {
+  state.reportRes = res;
+  setResBtns('reportResRow', res);
+  renderReport();
+}
+
+// ── RENDER REPORT ──
+function renderReport(){
+  const res     = state.reportRes;
+  const agg     = aggregateReport(state.report, res);
+  const hasSelf = hasSelfUseData();
+  if(!agg.length) return;
+
+  const totalGP      = agg.reduce((a,b)=>a+b.grossProfit,0);
+  const totalSavings = agg.reduce((a,b)=>a+b.savings,0);
+  const totalValue   = agg.reduce((a,b)=>a+b.totalValue,0);
+  const totalGridCost= agg.reduce((a,b)=>a+b.gridCost,0);
+  const totalNetCost = agg.reduce((a,b)=>a+b.netCost,0);
+  const totalExport  = agg.reduce((a,b)=>a+b.kwh,0);
+  const days         = [...new Set(state.report.map(r=>r.date))];
+
+  document.getElementById('reportSub').textContent=`${days.length} days · ${agg.length} ${res} periods · ${state.area}`;
+
+  const naVal = `<span style="color:var(--muted);font-size:14px">N/A</span>`;
+  document.getElementById('reportMetrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Export profit</div><div class="metric-value green">${totalGP.toFixed(2)}</div><div class="metric-sub">DKK after deductions</div></div>
+    <div class="metric"><div class="metric-label">Self-use savings</div><div class="metric-value amber">${hasSelf?totalSavings.toFixed(2):naVal}</div><div class="metric-sub">${hasSelf?'DKK avoided cost':'No consumption data'}</div></div>
+    <div class="metric"><div class="metric-label">Total value</div><div class="metric-value green">${hasSelf?totalValue.toFixed(2):totalGP.toFixed(2)}</div><div class="metric-sub">DKK ${hasSelf?'export + savings':'export only'}</div></div>
+    <div class="metric"><div class="metric-label">Grid import cost</div><div class="metric-value" style="color:var(--danger)">${hasSelf?totalGridCost.toFixed(2):naVal}</div><div class="metric-sub">${hasSelf?'DKK paid for grid electricity':'No consumption data'}</div></div>
+    <div class="metric"><div class="metric-label">Net electricity cost</div><div class="metric-value">${hasSelf?totalNetCost.toFixed(2):naVal}</div><div class="metric-sub">${hasSelf?'DKK (grid cost − total value)':'No consumption data'}</div></div>
+    <div class="metric"><div class="metric-label">Export</div><div class="metric-value blue">${totalExport.toFixed(2)}</div><div class="metric-sub">kWh to grid</div></div>
+  `;
+
+  const labels = agg.map(r=>periodLabel(r.key, res));
+  if(reportChart) reportChart.destroy();
+
+  // Chart: stacked income (export profit + savings) vs grid cost
+  const datasets = hasSelf ? [
+    {label:'Export profit',   data:agg.map(r=>+r.grossProfit.toFixed(3)), backgroundColor:'#4ade80',                   borderRadius:3, stack:'income'},
+    {label:'Self-use savings',data:agg.map(r=>+r.savings.toFixed(3)),     backgroundColor:'#f59e0b',                   borderRadius:3, stack:'income'},
+    {label:'Grid import cost',data:agg.map(r=>+(-r.gridCost).toFixed(3)), backgroundColor:'rgba(248,113,113,0.6)',      borderRadius:3, stack:'cost'}
+  ] : [
+    {label:'Export profit',   data:agg.map(r=>+r.grossProfit.toFixed(3)), backgroundColor:'#4ade80',                   borderRadius:3},
+  ];
+
+  reportChart=new Chart(document.getElementById('reportChart'),{
+    type:'bar',
+    data:{labels, datasets},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{
+        x:{stacked:true, ticks:{color:'#7a8099',font:{size:9},maxRotation:45,autoSkip:labels.length>30}, grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{stacked:true, ticks:{color:'#7a8099',font:{size:9},callback:v=>v.toFixed(2)+'kr'},              grid:{color:'rgba(255,255,255,0.04)'}}
+      }}
+  });
+
+  document.getElementById('reportBody').innerHTML=agg.map(r=>`
+    <tr>
+      <td>${periodLabel(r.key,res)}</td>
+      <td>${r.kwh.toFixed(3)}</td>
+      <td ${hasSelf?'':'style="color:var(--muted)"'}>${hasSelf?r.selfUse.toFixed(3):'—'}</td>
+      <td>${r.avgSpot.toFixed(4)}</td>
+      <td class="col-rev">${r.grossProfit.toFixed(4)}</td>
+      <td style="${hasSelf?'color:var(--accent3)':'color:var(--muted)'}">${hasSelf?r.savings.toFixed(4):'—'}</td>
+      <td class="col-gp">${hasSelf?r.totalValue.toFixed(4):r.grossProfit.toFixed(4)}</td>
+      <td style="${hasSelf?'color:var(--danger)':'color:var(--muted)'}">${hasSelf?r.gridCost.toFixed(4):'—'}</td>
+      <td style="${hasSelf?'':'color:var(--muted)'}">${hasSelf?r.netCost.toFixed(4):'—'}</td>
+      <td>${priceLevel(r.avgSpot)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── RENDER PRICES ──
+function windowLabel(h) {
+  if(h>=0  && h<6)  return '🌙 Night (00–06)';
+  if(h>=6  && h<8)  return '🌅 Morning (06–08)';
+  if(h>=8  && h<18) return '☀️ Solar (08–18)';
+  if(h>=18 && h<22) return '🌆 Evening (18–22)';
+  return '🌙 Late night (22–24)';
+}
+
+function renderPrices(){
+  const prices    = state.prices;
+  const deduction = getTotalDeduction();
+  if(!prices.length) return;
+
+  // ── Production-hour filter ──
+  const prodHours = new Set(state.production.map(r=>r.time.slice(0,2)));
+
+  // ── Global stats ──
+  const allPrices  = prices.map(p=>p.price);
+  const avg        = allPrices.reduce((a,b)=>a+b,0)/allPrices.length;
+  const peak       = Math.max(...allPrices);
+  const offPeak    = Math.min(...allPrices);
+  const negCount   = allPrices.filter(p=>p<0).length;
+  const nearZero   = allPrices.filter(p=>p>=0&&p<0.05).length;
+  const days       = [...new Set(prices.map(p=>p.date))];
+
+  // Avg price during production hours
+  const prodPrices = prices.filter(p=>prodHours.has(p.time.slice(0,2)));
+  const avgProdHr  = prodPrices.length ? prodPrices.reduce((a,b)=>a+b.price,0)/prodPrices.length : 0;
+
+  document.getElementById('pricesSub').textContent=`${state.area} · ${prices.length} MTUs · ${days.length} days`;
+
+  document.getElementById('priceMetrics').innerHTML=`
+    <div class="metric"><div class="metric-label">All-day avg</div><div class="metric-value">${avg.toFixed(3)}</div><div class="metric-sub">DKK/kWh</div></div>
+    <div class="metric"><div class="metric-label">During production</div><div class="metric-value ${avgProdHr>avg?'amber':'green'}">${avgProdHr.toFixed(3)}</div><div class="metric-sub">DKK/kWh avg (08–18)</div></div>
+    <div class="metric"><div class="metric-label">Period peak</div><div class="metric-value" style="color:var(--danger)">${peak.toFixed(3)}</div><div class="metric-sub">DKK/kWh</div></div>
+    <div class="metric"><div class="metric-label">Period off-peak</div><div class="metric-value green">${offPeak.toFixed(3)}</div><div class="metric-sub">DKK/kWh</div></div>
+    <div class="metric"><div class="metric-label">Negative price MTUs</div><div class="metric-value ${negCount>0?'style="color:var(--danger)"':''}">${negCount}</div><div class="metric-sub">${negCount>0?'You earned nothing on these':'No negative prices 👍'}</div></div>
+    <div class="metric"><div class="metric-label">Near-zero MTUs</div><div class="metric-value">${nearZero}</div><div class="metric-sub">0–5 øre/kWh (very low return)</div></div>
+  `;
+
+  // ── Price windows ──
+  const windows = [
+    {label:'🌙 Night 00–06',    from:0,  to:6,  color:'rgba(96,165,250,0.3)'},
+    {label:'🌅 Morning 06–08',  from:6,  to:8,  color:'rgba(245,158,11,0.4)'},
+    {label:'☀️ Solar 08–18',    from:8,  to:18, color:'rgba(74,222,128,0.35)'},
+    {label:'🌆 Evening 18–22',  from:18, to:22, color:'rgba(248,113,113,0.35)'},
+    {label:'🌙 Late 22–24',     from:22, to:24, color:'rgba(96,165,250,0.2)'},
+  ];
+  document.getElementById('priceWindows').innerHTML = windows.map(w=>{
+    const wp = prices.filter(p=>{ const h=parseInt(p.time.slice(0,2)); return h>=w.from && h<w.to; });
+    const wavg = wp.length ? wp.reduce((a,b)=>a+b.price,0)/wp.length : 0;
+    const wnet = Math.max(0, wavg - deduction);
+    const wneg = wp.filter(p=>p.price<0).length;
+    return `<div class="metric" style="border-left:2px solid ${w.color.replace('0.3','0.8').replace('0.35','0.8').replace('0.2','0.6').replace('0.4','0.8')}">
+      <div class="metric-label">${w.label}</div>
+      <div class="metric-value">${wavg.toFixed(3)}</div>
+      <div class="metric-sub">avg spot · ${wnet.toFixed(3)} net · ${wneg} neg MTUs</div>
+    </div>`;
+  }).join('');
+
+  // ── Avg price by hour of day ──
+  const hourAvg={}, hourCnt={};
+  for(const p of prices){
+    const h=parseInt(p.time.slice(0,2));
+    hourAvg[h]=(hourAvg[h]||0)+p.price;
+    hourCnt[h]=(hourCnt[h]||0)+1;
+  }
+  const hourLabels=Array.from({length:24},(_,i)=>String(i).padStart(2,'0')+':00');
+  const hourData=Array.from({length:24},(_,i)=>hourCnt[i]?+(hourAvg[i]/hourCnt[i]).toFixed(4):0);
+  const barColors=hourLabels.map((_,i)=>{
+    if(i>=8&&i<18) return 'rgba(74,222,128,0.7)';
+    if(i>=18&&i<22) return 'rgba(248,113,113,0.6)';
+    return 'rgba(96,165,250,0.45)';
+  });
+
+  if(priceHourChart) priceHourChart.destroy();
+  priceHourChart=new Chart(document.getElementById('priceHourChart'),{
+    type:'bar',
+    data:{labels:hourLabels, datasets:[
+      {label:'Avg price',data:hourData,backgroundColor:barColors,borderRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#7a8099',font:{size:8},maxRotation:45,autoSkip:false},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#7a8099',font:{size:9},callback:v=>v.toFixed(2)+'kr'},grid:{color:'rgba(255,255,255,0.04)'}}
+      }}
+  });
+
+  // ── Daily price range ──
+  const dayPeak={},dayAvg={},dayMin={},dayCnt={};
+  for(const p of prices){
+    if(!dayPeak[p.date]||p.price>dayPeak[p.date]) dayPeak[p.date]=p.price;
+    if(!dayMin[p.date]||p.price<dayMin[p.date])  dayMin[p.date]=p.price;
+    dayAvg[p.date]=(dayAvg[p.date]||0)+p.price;
+    dayCnt[p.date]=(dayCnt[p.date]||0)+1;
+  }
+  const dLabels=Object.keys(dayPeak).sort();
+
+  if(priceDayChart) priceDayChart.destroy();
+  priceDayChart=new Chart(document.getElementById('priceDayChart'),{
+    type:'bar',
+    data:{labels:dLabels.map(d=>d.slice(5)), datasets:[
+      {label:'Daily peak', data:dLabels.map(d=>+dayPeak[d].toFixed(4)), backgroundColor:'rgba(248,113,113,0.55)', borderRadius:3},
+      {label:'Daily avg',  data:dLabels.map(d=>+(dayAvg[d]/dayCnt[d]).toFixed(4)), backgroundColor:'rgba(96,165,250,0.5)',  borderRadius:3},
+      {label:'Daily low',  data:dLabels.map(d=>+dayMin[d].toFixed(4)), backgroundColor:'rgba(74,222,128,0.5)',  borderRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#7a8099',font:{size:9},maxRotation:45,autoSkip:dLabels.length>20},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#7a8099',font:{size:9},callback:v=>v.toFixed(2)+'kr'},grid:{color:'rgba(255,255,255,0.04)'}}
+      }}
+  });
+
+  // ── Table ──
+  document.getElementById('priceBody').innerHTML=prices.slice(0,500).map(r=>{
+    const h=parseInt(r.time.slice(0,2));
+    const win = h>=8&&h<18?'☀️ Solar':h>=18&&h<22?'🌆 Evening':h>=6&&h<8?'🌅 Morning':h>=22?'🌙 Late':'🌙 Night';
+    const net=+(r.price-deduction).toFixed(4);
+    return `<tr>
+      <td>${r.date}</td><td>${r.time}</td>
+      <td ${r.price<0?'style="color:var(--danger)"':''}>${r.price.toFixed(4)}</td>
+      <td ${net<0?'style="color:var(--danger)"':''}>${net.toFixed(4)}</td>
+      <td style="font-size:10px">${win}</td>
+      <td>${priceLevel(r.price)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── RENDER PRODUCTION ──
+function hasSelfUseData(){
+  // Real self-use data only exists with sample mode — classic API and V1 token
+  // both return selfUse:0. Check if any row actually has selfUse > 0.
+  return state.production.some(r=>(r.selfUse||0) > 0);
+}
+
+function renderProduction(){
+  const res = state.prodRes;
+  const agg = aggregateProduction(state.production, res);
+  if(!agg.length) return;
+
+  const hasSelf    = hasSelfUseData();
+  const totalGross   = agg.reduce((a,b)=>a+b.grossKwh,0);
+  const totalExport  = agg.reduce((a,b)=>a+b.kwh,0);
+  const totalSelf    = agg.reduce((a,b)=>a+b.selfUse,0);
+  const totalSavings = agg.reduce((a,b)=>a+b.savings,0);
+  const totalExpRev  = agg.reduce((a,b)=>a+b.exportRev,0);
+  const totalValue   = agg.reduce((a,b)=>a+b.total,0);
+  const days = [...new Set(state.production.map(p=>p.date))];
+
+  document.getElementById('prodSub').textContent=`${days.length} days · ${agg.length} ${res} periods`;
+
+  // Metric cards — grey out self-use/savings if not available
+  const naStyle = `color:var(--muted);font-size:14px`;
+  document.getElementById('prodMetrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Export</div><div class="metric-value green">${totalExport.toFixed(2)}</div><div class="metric-sub">kWh to grid</div></div>
+    <div class="metric"><div class="metric-label">Export revenue</div><div class="metric-value blue">${totalExpRev.toFixed(2)}</div><div class="metric-sub">DKK after deductions</div></div>
+    <div class="metric"><div class="metric-label">Self-use savings</div>
+      <div class="metric-value" style="${hasSelf?'color:var(--accent3)':naStyle}">${hasSelf?totalSavings.toFixed(2):'N/A'}</div>
+      <div class="metric-sub">${hasSelf?'DKK avoided cost':'No consumption data'}</div>
+    </div>
+    <div class="metric"><div class="metric-label">Total value</div>
+      <div class="metric-value" style="${hasSelf?'color:var(--accent)':naStyle}">${hasSelf?totalValue.toFixed(2):totalExpRev.toFixed(2)}</div>
+      <div class="metric-sub">${hasSelf?'DKK export + savings':'DKK export only'}</div>
+    </div>
+  `;
+
+  // Data availability notice
+  const notice = hasSelf
+    ? ''
+    : `<div class="note" style="margin-bottom:12px">⚠ Self-use and savings figures require consumption data not available from the Growatt API. Connect eloverblik.dk data to enable these. Export revenue figures are accurate.</div>`;
+
+  const labels = agg.map(r=>periodLabel(r.key, res));
+  const chartOpts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{color:'#7a8099',font:{size:9},maxRotation:45,autoSkip:labels.length>30},grid:{color:'rgba(255,255,255,0.04)'}},
+      y:{ticks:{color:'#7a8099',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}
+    }
+  };
+
+  // Chart 1: kWh — always show export; gross = export when no self-use data
+  if(prodChartKwh) prodChartKwh.destroy();
+  prodChartKwh=new Chart(document.getElementById('prodChartKwh'),{
+    type:'bar',
+    data:{labels, datasets: hasSelf ? [
+      {label:'Gross production',data:agg.map(r=>+r.grossKwh.toFixed(3)),
+        backgroundColor:'rgba(245,158,11,0.3)',borderColor:'rgba(245,158,11,0.7)',borderWidth:1,borderRadius:3},
+      {label:'Export',data:agg.map(r=>+r.kwh.toFixed(3)),
+        backgroundColor:'rgba(96,165,250,0.5)',borderColor:'rgba(96,165,250,0.8)',borderWidth:1,borderRadius:3}
+    ] : [
+      {label:'Export',data:agg.map(r=>+r.kwh.toFixed(3)),
+        backgroundColor:'rgba(96,165,250,0.5)',borderColor:'rgba(96,165,250,0.8)',borderWidth:1,borderRadius:3}
+    ]},
+    options:{...chartOpts, scales:{...chartOpts.scales,
+      y:{...chartOpts.scales.y, ticks:{...chartOpts.scales.y.ticks, callback:v=>v.toFixed(1)+'kWh'}}
+    }}
+  });
+
+  // Chart 2: DKK — show savings only if available
+  if(prodChartDkk) prodChartDkk.destroy();
+  prodChartDkk=new Chart(document.getElementById('prodChartDkk'),{
+    type:'bar',
+    data:{labels, datasets: hasSelf ? [
+      {label:'Export revenue',data:agg.map(r=>+r.exportRev.toFixed(3)),backgroundColor:'#4ade80',borderRadius:3,stack:'dkk'},
+      {label:'Self-use savings',data:agg.map(r=>+r.savings.toFixed(3)),backgroundColor:'#f59e0b',borderRadius:3,stack:'dkk'}
+    ] : [
+      {label:'Export revenue',data:agg.map(r=>+r.exportRev.toFixed(3)),backgroundColor:'#4ade80',borderRadius:3}
+    ]},
+    options:{...chartOpts, scales:{
+      x:{...chartOpts.scales.x, stacked:hasSelf},
+      y:{...chartOpts.scales.y, stacked:hasSelf,
+        ticks:{color:'#7a8099',font:{size:9},callback:v=>v.toFixed(2)+'kr'}}
+    }}
+  });
+
+  // Inject notice above table
+  const tableCard = document.getElementById('prodTableCard');
+  if(tableCard) tableCard.insertAdjacentHTML('afterbegin', notice);
+
+  // Table — grey out self-use/savings columns if no data
+  const selfStyle = hasSelf ? '' : 'style="color:var(--muted)"';
+  document.getElementById('prodBody').innerHTML=agg.map(r=>`
+    <tr>
+      <td>${periodLabel(r.key,res)}</td>
+      <td style="color:var(--accent3)">${r.grossKwh.toFixed(3)}</td>
+      <td>${r.kwh.toFixed(3)}</td>
+      <td ${selfStyle}>${hasSelf ? r.selfUse.toFixed(3) : '—'}</td>
+      <td class="col-rev">${r.exportRev.toFixed(4)}</td>
+      <td ${selfStyle}>${hasSelf ? r.savings.toFixed(4) : '—'}</td>
+      <td class="col-gp">${hasSelf ? r.total.toFixed(4) : r.exportRev.toFixed(4)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── RENDER CONSUMPTION ──
+function setConsRes(res){
+  state.consRes=res;
+  document.querySelectorAll('#consResRow .res-btn').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('onclick')?.includes("'"+res+"'"));
+  });
+  renderConsumption();
+}
+
+function renderConsumption(){
+  const hasSelf = hasSelfUseData();
+  document.getElementById('consNoData').style.display = hasSelf ? 'none' : 'block';
+  document.getElementById('consData').style.display   = hasSelf ? 'block' : 'none';
+  if(!hasSelf) return;
+
+  const res     = state.consRes;
+  const tariff  = getConsumerTariff();
+  const priceMap= {};
+  for(const p of state.prices) priceMap[slotKey(p.date,p.time)]=p.price;
+
+  // Aggregate from production rows (which carry selfUse and gridImport after applyConsumption)
+  const map={};
+  for(const r of state.production){
+    const k  = periodKey(r.date, r.time, res);
+    if(!map[k]) map[k]={key:k, gridImport:0, selfUse:0, savings:0, gridCost:0, count:0};
+    const spot    = priceMap[slotKey(r.date,r.time)] ?? 0;
+    const selfUse = r.selfUse || 0;
+    const gridImp = r.gridImport || 0;
+    map[k].selfUse    += selfUse;
+    map[k].gridImport += gridImp;
+    map[k].savings    += selfUse * (spot + tariff);
+    map[k].gridCost   += gridImp * (spot + tariff);
+    map[k].count++;
+  }
+
+  const agg = Object.values(map).sort((a,b)=>a.key.localeCompare(b.key)).map(r=>({
+    ...r,
+    selfUse:   +r.selfUse.toFixed(3),
+    gridImport:+r.gridImport.toFixed(3),
+    savings:   +r.savings.toFixed(3),
+    gridCost:  +r.gridCost.toFixed(3),
+    totalLoad: +(r.selfUse+r.gridImport).toFixed(3),
+    netCost:   +(r.gridCost-r.savings).toFixed(3)
+  }));
+
+  if(!agg.length) return;
+
+  const totGrid    = agg.reduce((a,b)=>a+b.gridImport,0);
+  const totSelf    = agg.reduce((a,b)=>a+b.selfUse,0);
+  const totLoad    = agg.reduce((a,b)=>a+b.totalLoad,0);
+  const totSavings = agg.reduce((a,b)=>a+b.savings,0);
+  const totGridCost= agg.reduce((a,b)=>a+b.gridCost,0);
+  const totNetCost = agg.reduce((a,b)=>a+b.netCost,0);
+  const days       = [...new Set(state.production.map(r=>r.date))];
+  const selfPct    = totLoad>0?(totSelf/totLoad*100):0;
+
+  document.getElementById('consSub').textContent=`${days.length} days · ${agg.length} ${res} periods · Eloverblik`;
+  document.getElementById('consMetrics').innerHTML=`
+    <div class="metric"><div class="metric-label">Total load</div><div class="metric-value">${totLoad.toFixed(1)}</div><div class="metric-sub">kWh consumed</div></div>
+    <div class="metric"><div class="metric-label">Grid import</div><div class="metric-value" style="color:var(--danger)">${totGrid.toFixed(1)}</div><div class="metric-sub">kWh from grid</div></div>
+    <div class="metric"><div class="metric-label">Solar covered</div><div class="metric-value amber">${totSelf.toFixed(1)}</div><div class="metric-sub">kWh (${selfPct.toFixed(0)}% of load)</div></div>
+    <div class="metric"><div class="metric-label">Self-use savings</div><div class="metric-value green">${totSavings.toFixed(2)}</div><div class="metric-sub">DKK avoided</div></div>
+    <div class="metric"><div class="metric-label">Grid import cost</div><div class="metric-value" style="color:var(--danger)">${totGridCost.toFixed(2)}</div><div class="metric-sub">DKK paid</div></div>
+    <div class="metric"><div class="metric-label">Net electricity cost</div><div class="metric-value">${totNetCost.toFixed(2)}</div><div class="metric-sub">DKK after savings</div></div>
+  `;
+
+  const labels = agg.map(r=>periodLabel(r.key,res));
+  const chartBase = {
+    responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{
+      x:{stacked:true,ticks:{color:'#7a8099',font:{size:9},maxRotation:45,autoSkip:labels.length>30},grid:{color:'rgba(255,255,255,0.04)'}},
+      y:{stacked:true,ticks:{color:'#7a8099',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}
+    }
+  };
+
+  if(consChartKwh) consChartKwh.destroy();
+  consChartKwh = new Chart(document.getElementById('consChartKwh'),{
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Grid import',data:agg.map(r=>+r.gridImport.toFixed(3)),backgroundColor:'rgba(248,113,113,0.55)',borderRadius:3,stack:'load'},
+      {label:'Solar self-use',data:agg.map(r=>+r.selfUse.toFixed(3)),backgroundColor:'rgba(245,158,11,0.6)',borderRadius:3,stack:'load'}
+    ]},
+    options:{...chartBase, scales:{...chartBase.scales,
+      y:{...chartBase.scales.y, ticks:{color:'#7a8099',font:{size:9},callback:v=>v.toFixed(1)+'kWh'}}
+    }}
+  });
+
+  if(consChartDkk) consChartDkk.destroy();
+  consChartDkk = new Chart(document.getElementById('consChartDkk'),{
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'Grid import cost',data:agg.map(r=>+r.gridCost.toFixed(3)),backgroundColor:'rgba(248,113,113,0.55)',borderRadius:3,stack:'cost'},
+      {label:'Self-use savings',data:agg.map(r=>+r.savings.toFixed(3)),backgroundColor:'rgba(245,158,11,0.6)',borderRadius:3,stack:'cost'}
+    ]},
+    options:{...chartBase, scales:{...chartBase.scales,
+      y:{...chartBase.scales.y, ticks:{color:'#7a8099',font:{size:9},callback:v=>v.toFixed(2)+'kr'}}
+    }}
+  });
+
+  document.getElementById('consBody').innerHTML=agg.map(r=>`
+    <tr>
+      <td>${periodLabel(r.key,res)}</td>
+      <td style="color:var(--danger)">${r.gridImport.toFixed(3)}</td>
+      <td style="color:var(--accent3)">${r.selfUse.toFixed(3)}</td>
+      <td>${r.totalLoad.toFixed(3)}</td>
+      <td style="color:var(--danger)">${r.gridCost.toFixed(3)}</td>
+      <td style="color:var(--accent3)">${r.savings.toFixed(3)}</td>
+      <td class="col-gp">${r.netCost.toFixed(3)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── MAIN FETCH ──
+
+// Silent retry wrapper — catches network-level failures (CORS preflight, connection
+// warmup) and retries once after a short pause before surfacing to the user.
+async function fetchWithRetry(fn, retryDelay=1000) {
+  try {
+    return await fn();
+  } catch(e) {
+    if(e instanceof TypeError && e.message.toLowerCase().includes('fetch')) {
+      await new Promise(r=>setTimeout(r, retryDelay));
+      return await fn(); // second attempt — let this one throw if it also fails
+    }
+    throw e;
+  }
+}
+
+async function runFetch(){
+  const fetchBtn=document.getElementById('fetchBtn');
+  const refetchBtn=document.getElementById('refetchBtn');
+  if(fetchBtn) fetchBtn.disabled=true;
+  if(refetchBtn) refetchBtn.disabled=true;
+  showStatus('Fetching Nordpool 15-min prices…','loading');
+  try{
+    const days=dateRange();
+    if(!days.length) throw new Error('Select a valid date range');
+    saveTokens(); // persist credentials for next session
+
+    let prices=await fetchNordpool();
+    if(!prices.length) prices=generateSamplePrices(days);
+    state.prices=prices;
+
+    showStatus('Fetching production data…','loading');
+
+    if(state.mode==='token'){
+      try{
+        state.production=await fetchGrowattV1();
+        if(!state.production.length) throw new Error('No data returned — check your date range, or try username + password if your inverter is an older MIC/MAX series');
+        updateBadges({growatt:'ok'});
+      }catch(e){
+        showStatus('Growatt V1: '+e.message+'. Using sample data instead.','error');
+        updateBadges({growatt:'sample'});
+        await new Promise(r=>setTimeout(r,2000));
+        state.production=generateSampleProduction(days);
+      }
+    } else if(state.mode==='pass'){
+      try{
+        state.production=await fetchGrowattClassic();
+        if(!state.production.length) throw new Error('No production data returned — the inverter may not have logged data for this date range');
+        updateBadges({growatt:'ok'});
+      }catch(e){
+        showStatus('Growatt: '+e.message+'. Using sample data instead.','error');
+        updateBadges({growatt:'sample'});
+        await new Promise(r=>setTimeout(r,2000));
+        state.production=generateSampleProduction(days);
+      }
+    } else if(state.mode==='csv'){
+      state.production=parseCSV(document.getElementById('csvData').value);
+      if(!state.production.length) throw new Error('No valid CSV rows found');
+      updateBadges({growatt:'ok'});
+    } else {
+      state.production=generateSampleProduction(days);
+      updateBadges({growatt:'sample'});
+    }
+
+    // ── Eloverblik consumption (optional) ──
+    try{
+      const gridImportMap = await fetchWithRetry(()=>fetchEloverblik(days));
+      if(gridImportMap && Object.keys(gridImportMap).length > 0){
+        state.production = applyConsumption(state.production, gridImportMap);
+        updateBadges({elo:'ok'});
+        showStatus('Eloverblik consumption loaded — self-use data is now real.','success');
+        await new Promise(r=>setTimeout(r,800));
+      } else {
+        updateBadges({elo:'skip'});
+      }
+    }catch(e){
+      updateBadges({elo:'error'});
+      showStatus('Eloverblik: '+e.message+'. Continuing without consumption data.','error');
+      await new Promise(r=>setTimeout(r,1500));
+    }
+
+    buildReport();
+    renderInsights();
+    renderReport();
+    renderPrices();
+    renderProduction();
+    renderConsumption();
+
+    document.getElementById('headerSub').textContent=`${state.area} · ${days[0]} → ${days[days.length-1]}`;
+    showStatus('Done! Report ready.','success');
+    switchTab('insights');
+  }catch(e){
+    showStatus(e.message,'error');
+  }
+  if(fetchBtn) fetchBtn.disabled=false;
+  if(refetchBtn) refetchBtn.disabled=false;
+}
+
+// ── EXPORT CSV ──
+function exportCSV(){
+  const rows=[['Date','MTU start','MTU end','kWh','Spot DKK/kWh','Deduction DKK/kWh','Revenue DKK','Gross profit DKK']];
+  for(const r of state.report) rows.push([r.date,r.time,mtuEnd(r.time),r.kwh,r.spot,r.deduction,r.revenue,r.grossProfit]);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));
+  a.download=`solar-${document.getElementById('dateFrom').value}-${document.getElementById('dateTo').value}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
