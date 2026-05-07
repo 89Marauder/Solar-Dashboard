@@ -13,5 +13,5 @@ A personal solar export revenue dashboard for Growatt inverters with live Nordpo
 Open the dashboard URL, paste your Growatt API token in Setup, select a date range, and hit Fetch.
 
 ## Live site
-https://89marauder.github.io/solar-dashboard# Solar-Dashboard
+https://89marauder.github.io/solar-dashboard Solar-Dashboard
 Displays PV output and combines it with price data 
